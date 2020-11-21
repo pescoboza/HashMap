@@ -21,10 +21,10 @@
 template <class T, class K, class Hasher = std::hash<K>>
 class HashMapInternalChaining {
 	using Entry = std::pair<const K, T>;
-	using EntryUPtr = std::unique_ptr<Entry>;
-	using Bucket = std::list<EntryUPtr>;
+	using Bucket = std::list<Entry>;
+	using BucketUPtr = std::unique_ptr<Bucket>;
 
-	std::vector<Bucket> m_table; // Associative table container for key value pairs
+	std::vector<BucketUPtr> m_table; // Associative table container for key value pairs
 	Hasher m_hasher; // Hashing struct with overloaded operator()
 	size_t m_bucketCount; // Number of buckets in the table
 	size_t m_size; // Number of entries in the table
@@ -138,7 +138,7 @@ private:
 	* @param bucket Reference to linked list bucket of pair pointers
 	* @return Unique pointer to entry pair or nullptr if not found.
 	*/
-	static EntryUPtr* findNodeInBucket(const K& key, Bucket& bucket);
+	static typename Bucket::iterator findNodeInBucket(const K& key, Bucket& bucket);
 
 	/**
 	 * Finds the node element of the given key.
@@ -150,44 +150,40 @@ private:
 	 * @param [out] Node found found at the position
 	 * @return Index of the table mapped to the key
 	 */
-	size_t findNode(const K& key, EntryUPtr*& node);
+	size_t findNode(const K& key, Entry*& node);
 
 };
 
 template<class T, class K, class Hasher>
 inline const std::pair<bool, typename HashMapInternalChaining<T, K, Hasher>::Entry*> HashMapInternalChaining<T, K, Hasher>::insert(const K& key, const T& value) {
-	EntryUPtr* res{ nullptr };
-	size_t i{ findNode(key, res) };
-
-	// Check if the given position is 
-	if (res != nullptr && *res != nullptr) {
-		// The key is occupied, return the element
-		return { false, m_table[i].get() };
-
-	}
-	else {
-		// Position was empty, insert
-		m_table[i].emplace_back(std::make_unique<Entry>(key, value));
+	// Get the bucket at the given key position
+	BucketUPtr& bucketSlot{ m_table[hash(key)] };
+	if (bucketSlot == nullptr) {
+		bucketSlot = std::make_unique<Bucket>();
+		bucketSlot.emplace_back(key, value);
 		m_size++;
-		return { true, m_table[i].get() };
+		return {true, bucketSlot.get()};
+
 	}
+	
+	return { false, bucketSlot.get() };
 }
 
 template<class T, class K, class Hasher>
 inline typename HashMapInternalChaining<T, K, Hasher>::Entry* HashMapInternalChaining<T, K, Hasher>::find(const K& key) {
-	EntryUPtr* res{ nullptr };
+	Entry* res{ nullptr };
 	findNode(key, res);
-	return ((res != nullptr && *res != nullptr) ? res->get() : nullptr);
+	return (res != nullptr ? res->get() : nullptr);
 }
 
 template<class T, class K, class Hasher>
 inline void HashMapInternalChaining<T, K, Hasher>::erase(const K& key) {
 	// Find the node
-	EntryUPtr* res{ nullptr };
+	Entry* res{ nullptr };
 	findNode(key, res);
 
 	// If it is found, delete it
-	if (res != nullptr && *res != nullptr) {
+	if (res != nullptr) {
 		m_size--;
 		res->reset();
 	}
@@ -199,57 +195,20 @@ inline size_t HashMapInternalChaining<T, K, Hasher>::hash(const K& key) const {
 }
 
 template<class T, class K, class Hasher>
-inline typename HashMapInternalChaining<T, K, Hasher>::EntryUPtr* HashMapInternalChaining<T, K, Hasher>::findNodeInBucket(const K& key, Bucket& bucket){
-
+inline typename HashMapInternalChaining<T, K, Hasher>::Bucket::iterator HashMapInternalChaining<T, K, Hasher>::findNodeInBucket(const K& key, Bucket& bucket){
 	// Find the node in the linked list
-	auto it{ std::find_if(bucket.begin(), bucket.end(),
-		[&key](const EntryUPtr& entryNode) {
-			return (entryNode != nullptr &&
-				   entryNode->first == key);
-		})
-	};
-
-	return (it != bucket.end() ? &(*it) : nullptr);
+	return std::find_if(bucket.begin(), bucket.end(),
+		[&key](const Entry& entry) {
+			return (entry.first == key);
+		}
+	);
 }
 
 template<class T, class K, class Hasher>
-inline size_t HashMapInternalChaining<T, K, Hasher>::findNode(const K& key, EntryUPtr*& node) {
-
-	size_t startPos{ hash(key) };
-	if (m_table[startPos] == nullptr) {
-		// Not found
-		node = nullptr;
-		return startPos;
-	}
-
-	// Something found, compare the key to check for match
-	if (m_table[startPos]->first == key) {
-		// The X marks the spot!
-		node = &m_table[startPos];
-		return startPos;
-	}
-
-	// We got a collision, iterate until you get the key or null
-	// Get the starting position and wrap around the array looking for the key
-	for (size_t i{ 0U }; i < m_bucketCount; ++i) {
-		size_t wrapPos{ (startPos + i) % m_bucketCount };
-
-		if (m_table[wrapPos] == nullptr) {
-			// Not found
-			node = nullptr;
-			return wrapPos;
-		}
-
-		if (m_table[wrapPos]->first == key) {
-			// The mark was off, still got the treasure
-			node = &m_table[wrapPos];
-			return wrapPos;
-		}
-	}
-
-	// Worst case: full iteration
-	node = nullptr;
-	return -1;
+inline size_t HashMapInternalChaining<T, K, Hasher>::findNode(const K& key, Entry*& node) {
+	// Look for the node in the bucket list of the index mapped to the key
+	BucketUPtr& bucketPtr{ m_table[hash(key)] };
+	return (bucketPtr != nullptr ? findNodeInBucket(key, *bucketPtr) : nullptr);
 }
 
 #endif // !HASH_MAP_INTERNAL_CHAINING_HPP

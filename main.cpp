@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "HashMap.hpp"
+#include "HashMapInternalChaining.hpp"
 
 
 const size_t PRIMES[]{
@@ -24,7 +25,24 @@ const size_t PRIMES[]{
 	 16777215U
 };
 
-int main() {
+void chain() {
+	HashMapInternalChaining<int, int> hashMap{PRIMES[4]};
+
+	int k{ 3 };
+
+	hashMap.insert(k, 15);
+	hashMap.insert(k + 1, 15);
+
+	auto findRes1{ hashMap.find(k) };
+	auto findRes2{ hashMap.find(k + 1) };
+
+	hashMap.erase(k);
+	int a = 1;
+
+	
+}
+
+void quadratic() {
 
 	HashMap<int, int> hashMap{PRIMES[4]};
 
@@ -38,5 +56,11 @@ int main() {
 
 	hashMap.erase(k);
 
+}
+
+int main() {
+	
+	chain();
+	
 	return 0;
 }
