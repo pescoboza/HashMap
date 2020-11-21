@@ -71,7 +71,18 @@ private:
 	 * @param  key Key of the entry to hash
 	 * @return Index of the table mapped to the key
 	 */
-	size_t hash(const K& key);
+	size_t hash(const K& key) const;
+
+	/**
+	 * Finds the node element of the given key. 
+	 * Private helper for other functions
+	 * Time: O(1)
+	 * Space: O(1)
+	 *
+	 * @param  key Key of the entry to hash
+	 * @return Index of the table mapped to the key
+	 */
+	EntryUPtr* findNode(const K& key);
 	 	
 };
 
@@ -90,7 +101,18 @@ inline const std::pair<bool, typename HashMap<T, K, Size, Hash>::Entry*> HashMap
 
 template<class T, class K, size_t Size, class Hash>
 inline typename HashMap<T, K, Size, Hash>::Entry* HashMap<T, K, Size, Hash>::find(const K& key){
-	
+	EntryUPtr* res{findNode(key)};
+	return ((res != nullptr && *res != nullptr) ? res->get() : nullptr);
+}
+
+template<class T, class K, size_t Size, class Hash>
+inline size_t HashMap<T, K, Size, Hash>::hash(const K& key) const{
+	return m_hash(key) % Size;
+}
+
+template<class T, class K, size_t Size, class Hash>
+inline typename HashMap<T, K, Size, Hash>::EntryUPtr* HashMap<T, K, Size, Hash>::findNode(const K& key){
+
 	size_t startPos{ hash(key) };
 	if (m_table[startPos] == nullptr) {
 		// Not found
@@ -100,32 +122,27 @@ inline typename HashMap<T, K, Size, Hash>::Entry* HashMap<T, K, Size, Hash>::fin
 	// Something found, compare the key to check for match
 	if (m_table[startPos]->first == key) {
 		// The X marks the spot!
-		return m_table[startPos].get();
+		return &m_table[startPos];
 	}
 
 	// We got a collision, iterate until you get the key or null
 	// Get the starting position and wrap around the array looking for the key
 	for (size_t i{ 0U }; i < Size; ++i) {
-		size_t wrapPos{(startPos + i) % Size};
+		size_t wrapPos{ (startPos + i) % Size };
 
 		if (m_table[wrapPos] == nullptr) {
 			// Not found
 			return nullptr;
 		}
-		
+
 		if (m_table[wrapPos]->first == key) {
 			// The mark was off, still got the treasure
-			return m_table[wrapPos].get();
+			return &m_table[wrapPos];
 		}
 	}
 
 	// Worst case: full iteration
 	return nullptr;
-}
-
-template<class T, class K, size_t Size, class Hash>
-inline size_t HashMap<T, K, Size, Hash>::hash(const K& key){
-	return m_hash(key) % Size;
 }
 
 #endif // !HASH_MAP_HPP
