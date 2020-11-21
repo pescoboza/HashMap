@@ -1,8 +1,13 @@
-#ifndef HASH_MAP_HPP
-#define HASH_MAP_HPP
+#ifndef HASH_MAP_INTERNAL_CHAINING_HPP
+#define HASH_MAP_INTERNAL_CHAINING_HPP
 
-#include <memory>
 #include <vector>
+#include <list>
+#include <memory>
+
+
+
+
 
 
 /**
@@ -14,11 +19,12 @@
  * @param Hash Struct with overloaded operator() as with hash function
 */
 template <class T, class K, class Hasher = std::hash<K>>
-class HashMap {
+class HashMapInternalChaining {
 	using Entry = std::pair<const K, T>;
 	using EntryUPtr = std::unique_ptr<Entry>;
-	
-	std::vector<EntryUPtr> m_table; // Associative table container for key value pairs
+	using Bucket = std::list<EntryUPtr>;
+
+	std::vector<Bucket> m_table; // Associative table container for key value pairs
 	Hasher m_hasher; // Hashing struct with overloaded operator()
 	size_t m_bucketCount; // Number of buckets in the table
 	size_t m_size; // Number of entries in the table
@@ -28,10 +34,10 @@ public:
 	 * Default constructor for HastMap.
 	 * Time: O(1)
 	 * Space: O(1)
-	 * 
-	 * @return HashMap
+	 *
+	 * @return HashMapInternalChaining
 	 */
-	HashMap(size_t bucket_count) : m_table{}, m_hasher{ Hasher{} }, m_bucketCount{ bucket_count }, m_size{0U} {
+	HashMapInternalChaining(size_t bucket_count) : m_table{}, m_hasher{ Hasher{} }, m_bucketCount{ bucket_count }, m_size{ 0U } {
 		m_table.resize(m_bucketCount);
 		m_table.shrink_to_fit();
 	}
@@ -47,8 +53,8 @@ public:
 	 * @return Pointer to the newly inserted pair OR the previously mapped element
 	 */
 	const std::pair<bool, Entry*> insert(const K& key, const T& value);
-	
-	
+
+
 	/**
 	 * Finds an element on the hash table.
 	 * Time: O(1)
@@ -57,37 +63,38 @@ public:
 	 * @param  key Key to insert
 	 * @return Pointer to the found entry or nullptr if not found
 	 */
-	 Entry* find(const K& key);
+	Entry* find(const K& key);
 
-	 
-	 /**
-	 * Erases an entry with a given key.
+
+	/**
+	* Erases an entry with a given key.
+	* Time: O(1)
+	* Space: O(1)
+	*
+	* @param  key Key of the entry to erase
+	*/
+	void erase(const K& key);
+
+
+	/**
+	* Returns the number of entries in the container.
+	* Time: O(1)
+	* Space: O(1)
+	*
+	* @return Container size
+	*/
+	size_t size() const { return m_size; }
+
+
+	/**
+	 * Tells if the table is empty.
 	 * Time: O(1)
 	 * Space: O(1)
 	 *
-	 * @param  key Key of the entry to erase
+	 * @return Wether the table has elements
 	 */
-	 void erase(const K& key);
+	bool empty() const { return m_size == 0U; }
 
-	 
-	 /**
-	 * Returns the number of entries in the container.
-	 * Time: O(1)
-	 * Space: O(1)
-	 *
-	 * @return Container size
-	 */
-	 size_t size() const { return m_size; }
-
-	 
-	 /**
-	  * Tells if the table is empty.
-	  * Time: O(1)
-	  * Space: O(1)
-	  *
-	  * @return Wether the table has elements
-	  */
-	 bool empty() const { return m_size == 0U; }
 
 	 /**
 	  * Clears the content of the hash map.
@@ -101,15 +108,15 @@ public:
 		 m_table.resize(m_bucketCount);
 	 }
 
-	 
-	 /*
-	  * Gets the number of filled buckets in the container.
-	  * Time: O(1)
-	  * Space: O(1)
-	  * 
-	  * @return Number of filled buckets
-	  */
-	 size_t bucket_count() const { return m_bucketCount; }
+
+	/*
+	 * Gets the number of filled buckets in the container.
+	 * Time: O(1)
+	 * Space: O(1)
+	 *
+	 * @return Number of filled buckets
+	 */
+	size_t bucket_count() const { return m_bucketCount; }
 
 private:
 	/**
@@ -123,7 +130,18 @@ private:
 	size_t hash(const K& key) const;
 
 	/**
-	 * Finds the node element of the given key. 
+	* Private helper for finding a bucket node in the 
+	* given bucket.
+	* Time: O(n)
+	* Space: O(1)
+	* 
+	* @param bucket Reference to linked list bucket of pair pointers
+	* @return Unique pointer to entry pair or nullptr if not found.
+	*/
+	static EntryUPtr* findNodeInBucket(const K& key, Bucket& bucket);
+
+	/**
+	 * Finds the node element of the given key.
 	 * Protected helper for other functions
 	 * Time: O(1)
 	 * Space: O(1)
@@ -137,37 +155,37 @@ private:
 };
 
 template<class T, class K, class Hasher>
-inline const std::pair<bool, typename HashMap<T, K, Hasher>::Entry*> HashMap<T, K, Hasher>::insert(const K& key, const T& value){
-	EntryUPtr* res{nullptr};
+inline const std::pair<bool, typename HashMapInternalChaining<T, K, Hasher>::Entry*> HashMapInternalChaining<T, K, Hasher>::insert(const K& key, const T& value) {
+	EntryUPtr* res{ nullptr };
 	size_t i{ findNode(key, res) };
-	
+
 	// Check if the given position is 
 	if (res != nullptr && *res != nullptr) {
 		// The key is occupied, return the element
 		return { false, m_table[i].get() };
-		
+
 	}
 	else {
 		// Position was empty, insert
-		m_table[i] = std::make_unique<Entry>(key, value);
+		m_table[i].emplace_back(std::make_unique<Entry>(key, value));
 		m_size++;
 		return { true, m_table[i].get() };
 	}
 }
 
 template<class T, class K, class Hasher>
-inline typename HashMap<T, K, Hasher>::Entry* HashMap<T, K, Hasher>::find(const K& key){
+inline typename HashMapInternalChaining<T, K, Hasher>::Entry* HashMapInternalChaining<T, K, Hasher>::find(const K& key) {
 	EntryUPtr* res{ nullptr };
 	findNode(key, res);
 	return ((res != nullptr && *res != nullptr) ? res->get() : nullptr);
 }
 
 template<class T, class K, class Hasher>
-inline void HashMap<T, K, Hasher>::erase(const K& key){
+inline void HashMapInternalChaining<T, K, Hasher>::erase(const K& key) {
 	// Find the node
-	EntryUPtr* res{nullptr};
+	EntryUPtr* res{ nullptr };
 	findNode(key, res);
-	
+
 	// If it is found, delete it
 	if (res != nullptr && *res != nullptr) {
 		m_size--;
@@ -176,12 +194,26 @@ inline void HashMap<T, K, Hasher>::erase(const K& key){
 }
 
 template<class T, class K, class Hasher>
-inline size_t HashMap<T, K, Hasher>::hash(const K& key) const{
-	return m_hasher(key) % (m_bucketCount -1);
+inline size_t HashMapInternalChaining<T, K, Hasher>::hash(const K& key) const {
+	return m_hasher(key) % (m_bucketCount - 1);
 }
 
 template<class T, class K, class Hasher>
-inline size_t HashMap<T, K, Hasher>::findNode(const K& key, EntryUPtr*& node){
+inline typename HashMapInternalChaining<T, K, Hasher>::EntryUPtr* HashMapInternalChaining<T, K, Hasher>::findNodeInBucket(const K& key, Bucket& bucket){
+
+	// Find the node in the linked list
+	auto it{ std::find_if(bucket.begin(), bucket.end(),
+		[&key](const EntryUPtr& entryNode) {
+			return (entryNode != nullptr &&
+				   entryNode->first == key);
+		})
+	};
+
+	return (it != bucket.end() ? &(*it) : nullptr);
+}
+
+template<class T, class K, class Hasher>
+inline size_t HashMapInternalChaining<T, K, Hasher>::findNode(const K& key, EntryUPtr*& node) {
 
 	size_t startPos{ hash(key) };
 	if (m_table[startPos] == nullptr) {
@@ -193,7 +225,7 @@ inline size_t HashMap<T, K, Hasher>::findNode(const K& key, EntryUPtr*& node){
 	// Something found, compare the key to check for match
 	if (m_table[startPos]->first == key) {
 		// The X marks the spot!
-		node =  &m_table[startPos];
+		node = &m_table[startPos];
 		return startPos;
 	}
 
@@ -220,6 +252,7 @@ inline size_t HashMap<T, K, Hasher>::findNode(const K& key, EntryUPtr*& node){
 	return -1;
 }
 
-#endif // !HASH_MAP_HPP
+#endif // !HASH_MAP_INTERNAL_CHAINING_HPP
+
 
 

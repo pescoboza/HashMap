@@ -1,10 +1,9 @@
-#include <string>
-#include "HashMap.hpp"
-
-#include <unordered_map>
 #include <iostream>
 
-const std::array<size_t, 18U> PRIMES{
+#include "HashMap.hpp"
+
+
+const size_t PRIMES[]{
 	 7U,
 	 63U,
 	 511U,
