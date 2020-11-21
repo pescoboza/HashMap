@@ -12,5 +12,7 @@ int main() {
 	auto findRes1{ hashMap.find(k) };
 	auto findRes2{hashMap.find(k+1)};
 
+	hashMap.erase(k);
+
 	return 0;
 }

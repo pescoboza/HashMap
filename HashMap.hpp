@@ -114,6 +114,18 @@ inline typename HashMap<T, K, Size, Hash>::Entry* HashMap<T, K, Size, Hash>::fin
 }
 
 template<class T, class K, size_t Size, class Hash>
+inline void HashMap<T, K, Size, Hash>::erase(const K& key){
+	// Find the node
+	EntryUPtr* res{nullptr};
+	findNode(key, res);
+	
+	// If it is found, delete it
+	if (res != nullptr && *res != nullptr) {
+		res->reset();
+	}
+}
+
+template<class T, class K, size_t Size, class Hash>
 inline size_t HashMap<T, K, Size, Hash>::hash(const K& key) const{
 	return m_hash(key) % Size;
 }
