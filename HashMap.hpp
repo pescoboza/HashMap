@@ -80,28 +80,36 @@ private:
 	 * Space: O(1)
 	 *
 	 * @param  key Key of the entry to hash
+	 * @param [out] node found found at the position
 	 * @return Index of the table mapped to the key
 	 */
-	EntryUPtr* findNode(const K& key);
+	size_t findNode(const K& key, EntryUPtr*& node);
 	 	
 };
 
 template<class T, class K, size_t Size, class Hash>
 inline const std::pair<bool, typename HashMap<T, K, Size, Hash>::Entry*> HashMap<T, K, Size, Hash>::insert(const K& key, const T& value){
-	size_t i{ hash(key) };
-
-	bool wasInserted{ false };
-	if (m_table[i] == nullptr) {
-		m_table[i] = std::make_unique<Entry>(key, value);
-		wasInserted = true;
+	EntryUPtr* res{nullptr};
+	size_t i{ findNode(key, res) };
+	
+	// Check if the given position is 
+	if (res != nullptr && *res != nullptr) {
+		// The key is occupied, return the element
+		return { false, m_table[i].get() };
+		
 	}
-
-	return { wasInserted, m_table[i].get() };
+	else {
+		// Position was empty, insert
+		m_table[i] = std::make_unique<Entry>(key, value);
+		return { true, m_table[i].get() };
+		// TODO: Debug this.
+	}
 }
 
 template<class T, class K, size_t Size, class Hash>
 inline typename HashMap<T, K, Size, Hash>::Entry* HashMap<T, K, Size, Hash>::find(const K& key){
-	EntryUPtr* res{findNode(key)};
+	EntryUPtr* res{ nullptr };
+	findNode(key, res);
 	return ((res != nullptr && *res != nullptr) ? res->get() : nullptr);
 }
 
@@ -111,18 +119,20 @@ inline size_t HashMap<T, K, Size, Hash>::hash(const K& key) const{
 }
 
 template<class T, class K, size_t Size, class Hash>
-inline typename HashMap<T, K, Size, Hash>::EntryUPtr* HashMap<T, K, Size, Hash>::findNode(const K& key){
+inline size_t HashMap<T, K, Size, Hash>::findNode(const K& key, EntryUPtr*& node){
 
 	size_t startPos{ hash(key) };
 	if (m_table[startPos] == nullptr) {
 		// Not found
-		return nullptr;
+		node = nullptr;
+		return startPos;
 	}
 
 	// Something found, compare the key to check for match
 	if (m_table[startPos]->first == key) {
 		// The X marks the spot!
-		return &m_table[startPos];
+		node =  &m_table[startPos];
+		return startPos;
 	}
 
 	// We got a collision, iterate until you get the key or null
@@ -132,17 +142,20 @@ inline typename HashMap<T, K, Size, Hash>::EntryUPtr* HashMap<T, K, Size, Hash>:
 
 		if (m_table[wrapPos] == nullptr) {
 			// Not found
-			return nullptr;
+			node = nullptr;
+			return wrapPos;
 		}
 
 		if (m_table[wrapPos]->first == key) {
 			// The mark was off, still got the treasure
-			return &m_table[wrapPos];
+			node = &m_table[wrapPos];
+			return wrapPos;
 		}
 	}
 
 	// Worst case: full iteration
-	return nullptr;
+	node = nullptr;
+	return -1;
 }
 
 #endif // !HASH_MAP_HPP
