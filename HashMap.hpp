@@ -1,12 +1,9 @@
 #ifndef HASH_MAP_HPP
 #define HASH_MAP_HPP
 
-// https://github.com/aozturk/HashMap/blob/master/hashmap/HashMap.h
-// https://github.com/aozturk/HashMap/blob/master/hashmap/HashNode.h
-// https://github.com/aozturk/HashMap/blob/master/hashmap/KeyHash.h
-
 
 #include <array>
+#include <memory>
 
 /**
  * Implementation a hash table of constant size.
@@ -19,11 +16,20 @@
 template <class T, class K, size_t Size, class Hash = std::hash<K>>
 class HashMap {
 	using Entry = std::pair<const K, T>;
+	using EntryUPtr = std::unique_ptr<Entry>;
 	
-	std::array<Entry, Size> m_table;
+	std::array<EntryUPtr, Size> m_table;
+	Hash m_hash;
 
 public:
-	HashMap() : m_table{ std::array<Entry, Size>{} } {}
+	/**
+	 * Default constructor for HastMap.
+	 * Time: O(1)
+	 * Space: O(1)
+	 * 
+	 * @return HashMap
+	 */
+	HashMap() : m_table{ std::array<EntryUPtr, Size>{} }, m_hash{ Hash{} }{}
 
 	/**
 	 * Insert a new element in the hash table if no element already has the key.
@@ -55,6 +61,38 @@ public:
 	 * @param  key Key of the entry to erase
 	 */
 	 void erase(const K& key);
+
+private:
+	/**
+	 * Generates a container index mapped to the key.
+	 * Time: O(1)
+	 * Space: O(1)
+	 *
+	 * @param  key Key of the entry to hash
+	 * @return Index of the table mapped to the key
+	 */
+	size_t hash(const K& key);
 	 	
 };
+
+template<class T, class K, size_t Size, class Hash>
+inline const std::pair<bool, typename HashMap<T, K, Size, Hash>::Entry*> HashMap<T, K, Size, Hash>::insert(const K& key, const T& value){
+	size_t i{ hash(key) };
+
+	bool wasInserted{ false };
+	if (m_table[i] == nullptr) {
+		m_table[i] = std::make_unique<Entry>(key, value);
+		wasInserted = true;
+	}
+
+	return { wasInserted, m_table[i].get() };
+}
+
+template<class T, class K, size_t Size, class Hash>
+inline size_t HashMap<T, K, Size, Hash>::hash(const K& key){
+	return m_hash(key) % Size;
+}
+
 #endif // !HASH_MAP_HPP
+
+
