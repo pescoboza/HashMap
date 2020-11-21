@@ -1,9 +1,10 @@
 #ifndef HASH_MAP_HPP
 #define HASH_MAP_HPP
 
-
 #include <array>
 #include <memory>
+#include <vector>
+
 
 /**
  * Implementation a hash table of constant size.
@@ -13,13 +14,15 @@
  * @param Size Constant size of the hash table
  * @param Hash Struct with overloaded operator() as with hash function
 */
-template <class T, class K, size_t Size, class Hash = std::hash<K>>
+template <class T, class K, class Hasher = std::hash<K>>
 class HashMap {
 	using Entry = std::pair<const K, T>;
 	using EntryUPtr = std::unique_ptr<Entry>;
 	
-	std::array<EntryUPtr, Size> m_table;
-	Hash m_hash;
+	std::vector<EntryUPtr> m_table; // Associative table container for key value pairs
+	Hasher m_hasher; // Hashing struct with overloaded operator()
+	size_t m_bucketCount; // Number of buckets in the table
+	size_t m_size; // Number of entries in the table
 
 public:
 	/**
@@ -29,7 +32,11 @@ public:
 	 * 
 	 * @return HashMap
 	 */
-	HashMap() : m_table{ std::array<EntryUPtr, Size>{} }, m_hash{ Hash{} }{}
+	HashMap(size_t bucket_count) : m_table{}, m_hasher{ Hasher{} }, m_bucketCount{ bucket_count }, m_size{0U} {
+		m_table.resize(m_bucketCount);
+		m_table.shrink_to_fit();
+	}
+
 
 	/**
 	 * Insert a new element in the hash table if no element already has the key.
@@ -53,6 +60,7 @@ public:
 	 */
 	 Entry* find(const K& key);
 
+	 
 	 /**
 	 * Erases an entry with a given key.
 	 * Time: O(1)
@@ -61,6 +69,30 @@ public:
 	 * @param  key Key of the entry to erase
 	 */
 	 void erase(const K& key);
+
+	 
+	 /**
+	 * Returns the number of entries in the container.
+	 *
+	 * @return Container size
+	 */
+	 size_t size() const { return m_size; }
+
+	 
+	 /**
+	  * Tells if the table is empty.
+	  *
+	  * @return Wether the table has elements
+	  */
+	 bool empty() const { return m_size == 0U; }
+
+	 
+	 /*
+	  * Gets the number of filled buckets in the container.
+	  *
+	  * @return Number of filled buckets
+	  */
+	 size_t bucket_count() const { return m_bucketCount; }
 
 private:
 	/**
@@ -80,15 +112,15 @@ private:
 	 * Space: O(1)
 	 *
 	 * @param  key Key of the entry to hash
-	 * @param [out] node found found at the position
+	 * @param [out] Node found found at the position
 	 * @return Index of the table mapped to the key
 	 */
 	size_t findNode(const K& key, EntryUPtr*& node);
-	 	
+
 };
 
-template<class T, class K, size_t Size, class Hash>
-inline const std::pair<bool, typename HashMap<T, K, Size, Hash>::Entry*> HashMap<T, K, Size, Hash>::insert(const K& key, const T& value){
+template<class T, class K, class Hasher>
+inline const std::pair<bool, typename HashMap<T, K, Hasher>::Entry*> HashMap<T, K, Hasher>::insert(const K& key, const T& value){
 	EntryUPtr* res{nullptr};
 	size_t i{ findNode(key, res) };
 	
@@ -101,37 +133,38 @@ inline const std::pair<bool, typename HashMap<T, K, Size, Hash>::Entry*> HashMap
 	else {
 		// Position was empty, insert
 		m_table[i] = std::make_unique<Entry>(key, value);
+		m_size++;
 		return { true, m_table[i].get() };
-		// TODO: Debug this.
 	}
 }
 
-template<class T, class K, size_t Size, class Hash>
-inline typename HashMap<T, K, Size, Hash>::Entry* HashMap<T, K, Size, Hash>::find(const K& key){
+template<class T, class K, class Hasher>
+inline typename HashMap<T, K, Hasher>::Entry* HashMap<T, K, Hasher>::find(const K& key){
 	EntryUPtr* res{ nullptr };
 	findNode(key, res);
 	return ((res != nullptr && *res != nullptr) ? res->get() : nullptr);
 }
 
-template<class T, class K, size_t Size, class Hash>
-inline void HashMap<T, K, Size, Hash>::erase(const K& key){
+template<class T, class K, class Hasher>
+inline void HashMap<T, K, Hasher>::erase(const K& key){
 	// Find the node
 	EntryUPtr* res{nullptr};
 	findNode(key, res);
 	
 	// If it is found, delete it
 	if (res != nullptr && *res != nullptr) {
+		m_size--;
 		res->reset();
 	}
 }
 
-template<class T, class K, size_t Size, class Hash>
-inline size_t HashMap<T, K, Size, Hash>::hash(const K& key) const{
-	return m_hash(key) % Size;
+template<class T, class K, class Hasher>
+inline size_t HashMap<T, K, Hasher>::hash(const K& key) const{
+	return m_hasher(key) % (m_bucketCount -1);
 }
 
-template<class T, class K, size_t Size, class Hash>
-inline size_t HashMap<T, K, Size, Hash>::findNode(const K& key, EntryUPtr*& node){
+template<class T, class K, class Hasher>
+inline size_t HashMap<T, K, Hasher>::findNode(const K& key, EntryUPtr*& node){
 
 	size_t startPos{ hash(key) };
 	if (m_table[startPos] == nullptr) {
@@ -149,8 +182,8 @@ inline size_t HashMap<T, K, Size, Hash>::findNode(const K& key, EntryUPtr*& node
 
 	// We got a collision, iterate until you get the key or null
 	// Get the starting position and wrap around the array looking for the key
-	for (size_t i{ 0U }; i < Size; ++i) {
-		size_t wrapPos{ (startPos + i) % Size };
+	for (size_t i{ 0U }; i < m_bucketCount; ++i) {
+		size_t wrapPos{ (startPos + i) % m_bucketCount };
 
 		if (m_table[wrapPos] == nullptr) {
 			// Not found

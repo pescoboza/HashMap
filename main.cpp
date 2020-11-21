@@ -4,25 +4,30 @@
 #include <unordered_map>
 #include <iostream>
 
+const std::array<size_t, 18U> PRIMES{
+	 7U,
+	 63U,
+	 511U,
+	 1023U,
+	 2047U,
+	 4095U,
+	 8191U,
+	 16383U,
+	 32767U,
+	 65535U,
+	 131071U,
+	 262143U,
+	 524287U,
+	 1048575U,
+	 2097151U,
+	 4194303U,
+	 8388607U,
+	 16777215U
+};
+
 int main() {
 
-	std::unordered_map<int, double> map;
-	
-	int numInserts{ 10000000 };
-	int bucketCount{ -1 };
-	for (int i{ 0 }; i < numInserts; ++i) {
-		map.emplace(i, i + i * 0.1);
-		if (map.bucket_count() != bucketCount) {
-			bucketCount = map.bucket_count();
-			std::cout << "i: " << i <<" bc: " <<bucketCount - 1 << std::endl;
-		}
-	}
-
-	std::cout << map.max_bucket_count() << std::endl;
-	std::cout << map.bucket_count() << std::endl;
-	std::cout << map.load_factor() << std::endl;
-
-	HashMap<int, int, 3U> hashMap;
+	HashMap<int, int> hashMap{PRIMES[4]};
 
 	int k{ 3 };
 
