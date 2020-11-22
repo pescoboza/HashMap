@@ -13,7 +13,7 @@
  * @param Size Constant size of the hash table
  * @param Hash Struct with overloaded operator() as with hash function
 */
-template <class T, class K, class Hasher = std::hash<K>>
+template <class K, class T, class Hasher = std::hash<K>>
 class HashMap {
 	using Entry = std::pair<const K, T>;
 	using EntryUPtr = std::unique_ptr<Entry>;
@@ -136,8 +136,8 @@ private:
 
 };
 
-template<class T, class K, class Hasher>
-inline const std::pair<bool, typename HashMap<T, K, Hasher>::Entry*> HashMap<T, K, Hasher>::insert(const K& key, const T& value){
+template<class K, class T, class Hasher>
+inline const std::pair<bool, typename HashMap<K, T, Hasher>::Entry*> HashMap<K, T, Hasher>::insert(const K& key, const T& value){
 	EntryUPtr* res{nullptr};
 	size_t i{ findNode(key, res) };
 	
@@ -155,15 +155,15 @@ inline const std::pair<bool, typename HashMap<T, K, Hasher>::Entry*> HashMap<T, 
 	}
 }
 
-template<class T, class K, class Hasher>
-inline typename HashMap<T, K, Hasher>::Entry* HashMap<T, K, Hasher>::find(const K& key){
+template<class K, class T, class Hasher>
+inline typename HashMap<K, T, Hasher>::Entry* HashMap<K, T, Hasher>::find(const K& key){
 	EntryUPtr* res{ nullptr };
 	findNode(key, res);
 	return ((res != nullptr && *res != nullptr) ? res->get() : nullptr);
 }
 
-template<class T, class K, class Hasher>
-inline void HashMap<T, K, Hasher>::erase(const K& key){
+template<class K, class T, class Hasher>
+inline void HashMap<K, T, Hasher>::erase(const K& key){
 	// Find the node
 	EntryUPtr* res{nullptr};
 	findNode(key, res);
@@ -175,13 +175,13 @@ inline void HashMap<T, K, Hasher>::erase(const K& key){
 	}
 }
 
-template<class T, class K, class Hasher>
-inline size_t HashMap<T, K, Hasher>::hash(const K& key) const{
+template<class K, class T, class Hasher>
+inline size_t HashMap<K, T, Hasher>::hash(const K& key) const{
 	return m_hasher(key) % (m_bucketCount -1);
 }
 
-template<class T, class K, class Hasher>
-inline size_t HashMap<T, K, Hasher>::findNode(const K& key, EntryUPtr*& node){
+template<class K, class T, class Hasher>
+inline size_t HashMap<K, T, Hasher>::findNode(const K& key, EntryUPtr*& node){
 
 	size_t startPos{ hash(key) };
 	if (m_table[startPos] == nullptr) {

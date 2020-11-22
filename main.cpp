@@ -104,7 +104,7 @@ void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t
 template <class K, class T>
 void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t bucketCount, std::ostream& out  = std::cout) {
 
-	HashMap<int, int> hashMap{bucketCount};
+	HashMap<K, T> hashMap{bucketCount};
 
 
 	out << " ====== INSERTIONS =======\n";
@@ -205,6 +205,11 @@ void test2(std::ostream& out = std::cout) {
 struct Book {
 	std::string m_name;
 	std::string m_author;
+
+	friend std::ostream& operator << (std::ostream& out, const Book& b) {
+		out << b.m_name;
+		return out;
+	}
 };
 
 struct BookKey {
@@ -247,7 +252,7 @@ void test3(std::ostream& out = std::cout) {
 		books[8]
 	};
 
-	MapContent <BookKey, Book> mapContent;
+	MapContent<BookKey, Book> mapContent;
 	for (const auto& book : books) {
 		mapContent.emplace_back(BookKey{book}, book);
 	}

@@ -18,7 +18,7 @@
  * @param Size Constant size of the hash table
  * @param Hash Struct with overloaded operator() as with hash function
 */
-template <class T, class K, class Hasher = std::hash<K>>
+template <class K, class T, class Hasher = std::hash<K>>
 class HashMapInternalChaining {
 	using Entry = std::pair<const K, T>;
 	using Bucket = std::list<Entry>;
@@ -154,8 +154,8 @@ private:
 
 };
 
-template<class T, class K, class Hasher>
-inline const std::pair<bool, typename HashMapInternalChaining<T, K, Hasher>::Entry*> HashMapInternalChaining<T, K, Hasher>::insert(const K& key, const T& value) {
+template<class K, class T, class Hasher>
+inline const std::pair<bool, typename HashMapInternalChaining<K, T, Hasher>::Entry*> HashMapInternalChaining<K, T, Hasher>::insert(const K& key, const T& value) {
 	// Get the bucket at the given key position
 	BucketUPtr& bucketSlot{ m_table[hash(key)] };
 	
@@ -184,8 +184,8 @@ inline const std::pair<bool, typename HashMapInternalChaining<T, K, Hasher>::Ent
 
 }
 
-template<class T, class K, class Hasher>
-inline typename HashMapInternalChaining<T, K, Hasher>::Entry* HashMapInternalChaining<T, K, Hasher>::find(const K& key) {
+template<class K, class T, class Hasher>
+inline typename HashMapInternalChaining<K, T, Hasher>::Entry* HashMapInternalChaining<K, T, Hasher>::find(const K& key) {
 	// Look for the node
 	size_t i{ 0U };
 	auto res{ findNode(key, i) };
@@ -200,8 +200,8 @@ inline typename HashMapInternalChaining<T, K, Hasher>::Entry* HashMapInternalCha
 	return &*res.second;
 }
 
-template<class T, class K, class Hasher>
-inline void HashMapInternalChaining<T, K, Hasher>::erase(const K& key) {
+template<class K, class T, class Hasher>
+inline void HashMapInternalChaining<K, T, Hasher>::erase(const K& key) {
 	// Look for the node
 	size_t bucketPos;
 	auto res{ findNode(key, bucketPos) };
@@ -214,13 +214,13 @@ inline void HashMapInternalChaining<T, K, Hasher>::erase(const K& key) {
 	}
 }
 
-template<class T, class K, class Hasher>
-inline size_t HashMapInternalChaining<T, K, Hasher>::hash(const K& key) const {
+template<class K, class T, class Hasher>
+inline size_t HashMapInternalChaining<K, T, Hasher>::hash(const K& key) const {
 	return m_hasher(key) % (m_bucketCount - 1);
 }
 
-template<class T, class K, class Hasher>
-inline typename HashMapInternalChaining<T, K, Hasher>::Bucket::iterator HashMapInternalChaining<T, K, Hasher>::findNodeInBucket(const K& key, Bucket& bucket){
+template<class K, class T, class Hasher>
+inline typename HashMapInternalChaining<K, T, Hasher>::Bucket::iterator HashMapInternalChaining<K, T, Hasher>::findNodeInBucket(const K& key, Bucket& bucket){
 	// Find the node in the linked list
 	return std::find_if(bucket.begin(), bucket.end(),
 		[&key](const Entry& entry) {
@@ -229,8 +229,8 @@ inline typename HashMapInternalChaining<T, K, Hasher>::Bucket::iterator HashMapI
 	);
 }
 
-template<class T, class K, class Hasher>
-inline std::pair<bool , typename HashMapInternalChaining<T, K, Hasher>::Bucket::iterator> HashMapInternalChaining<T, K, Hasher>::findNode(const K& key, size_t& bucketPos) {
+template<class K, class T, class Hasher>
+inline std::pair<bool , typename HashMapInternalChaining<K, T, Hasher>::Bucket::iterator> HashMapInternalChaining<K, T, Hasher>::findNode(const K& key, size_t& bucketPos) {
 	// Look for the node in the bucket list of the index mapped to the key
 	size_t i{ hash(key) };
 	bucketPos = i;
