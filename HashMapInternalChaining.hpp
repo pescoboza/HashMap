@@ -158,15 +158,30 @@ template<class T, class K, class Hasher>
 inline const std::pair<bool, typename HashMapInternalChaining<T, K, Hasher>::Entry*> HashMapInternalChaining<T, K, Hasher>::insert(const K& key, const T& value) {
 	// Get the bucket at the given key position
 	BucketUPtr& bucketSlot{ m_table[hash(key)] };
+	
+	// If no bucket is found, create it and isert the element
 	if (bucketSlot == nullptr) {
 		bucketSlot = std::make_unique<Bucket>();
-		bucketSlot.emplace_back(key, value);
+		bucketSlot->emplace_back(key, value);
 		m_size++;
-		return {true, bucketSlot.get()};
-
+		return {true, &bucketSlot->back()};
 	}
 	
-	return { false, bucketSlot.get() };
+	// The node was full, look for the entry node in the bucket
+	auto nodeIt{findNodeInBucket(key, *bucketSlot)};
+
+	// Check the result of the lookup
+	if (nodeIt != bucketSlot.end()) {
+		// The key was occupied
+		return {false, &*nodeIt};
+	}
+	else {
+		// The bucket did not container the key, emplace it
+		bucketSlot->emplace_back(key, value);
+		m_size++;
+		return { true, &bucketSlot->back() };
+	}
+
 }
 
 template<class T, class K, class Hasher>
