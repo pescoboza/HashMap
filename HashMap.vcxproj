@@ -140,6 +140,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="HashMap.hpp" />
+    <ClInclude Include="Timer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HashMapInternalChaining.hpp" />

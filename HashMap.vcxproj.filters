@@ -26,5 +26,8 @@
     <ClInclude Include="HashMap.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Timer.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

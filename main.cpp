@@ -5,7 +5,7 @@
 #include "HashMap.hpp"
 #include "HashMapInternalChaining.hpp"
 
-template <class T, class K>
+template <class K, class T>
 using MapContent = std::vector<std::pair<K, T>>;
 
 template <class K>
@@ -63,25 +63,25 @@ unsigned getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES )
 * @param bucketCount Number of buckets in the hash map
 * @param out Output stream reference to log the results to
 */
-template <class T, class K>
+template <class K, class T>
 void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t bucketCount, std::ostream& out = std::cout) {
 	HashMapInternalChaining<K, T> map{bucketCount};
 
-	out << " ====== INSERTIONS =======\n"
+	out << " ====== INSERTIONS =======\n";
 	for (const auto& entry : mapContent) {
 		auto res{ map.insert(entry.first, entry.second) };
 		out << "try insert: (" << entry.first <<", " << entry.second <<  ") result: " << std::boolalpha << res.first;
 	}
 	
 	out << "\n\n\n";
-	out << " ====== LOOKUPS =======\n"
+	out << " ====== LOOKUPS =======\n";
 
 	for (const auto& key : lookups) {
 		auto res{ map.find(key) };
 		
 		out << "looked up: " << key << " result: ";
 		if (res == nullptr) {
-			out << " NULL"
+			out << " NULL";
 		}
 		else {
 			out << res->second;
@@ -101,27 +101,27 @@ void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t
 * @param bucketCount Number of buckets in the hash map
 * @param out Output stream reference to log the results to
 */
-template <class T, class K>
+template <class K, class T>
 void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t bucketCount, std::ostream& out  = std::cout) {
 
 	HashMap<int, int> hashMap{bucketCount};
 
 
-	out << " ====== INSERTIONS =======\n"
+	out << " ====== INSERTIONS =======\n";
 		for (const auto& entry : mapContent) {
-			auto res{ map.insert(entry.first, entry.second) };
+			auto res{ hashMap.insert(entry.first, entry.second) };
 			out << "try insert: (" << entry.first << ", " << entry.second << ") result: " << std::boolalpha << res.first;
 		}
 
 	out << "\n\n\n";
-	out << " ====== LOOKUPS =======\n"
+	out << " ====== LOOKUPS =======\n";
 
 		for (const auto& key : lookups) {
-			auto res{ map.find(key) };
+			auto res{ hashMap.find(key) };
 
 			out << "looked up: " << key << " result: ";
 			if (res == nullptr) {
-				out << " NULL"
+				out << " NULL";
 			}
 			else {
 				out << res->second;
@@ -138,7 +138,7 @@ void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, si
 * @param lookups Vector of keys to search in the hash map
 * @param out Output stream reference to log the results to 
 */
-template <class T, class K>
+template <class K, class T>
 void test_template(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, std::ostream& out = std::cout) {
 	size_t bucketCount{ getBucketCount(mapContent.size()) };
 
@@ -146,10 +146,10 @@ void test_template(const MapContent<K, T>& mapContent, const Lookups<K>& lookups
 	out << "QUADRATIC - BEGIN\n" << std::endl;
 	Timer timer;
 	quadratic(mapContent, lookups, bucketCount, out);
-	out "QUADRATIC - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
+	out << "QUADRATIC - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
 
-	out << "CHAINING:\n" << endl;
-	time.reset()
+	out << "CHAINING:\n" << std::endl;
+	timer.reset();
 	chain(mapContent, lookups, bucketCount, out);
 	out << "CHAINING - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
 
@@ -192,7 +192,9 @@ void test1(std::ostream& out = std::cout) {
 *
 * @param out Output stream reference to log the results to
 */
-void test2(std::ostream& out = std::cout);
+void test2(std::ostream& out = std::cout) {
+	std::cout << "IMPLEMENT TEST 2" << std::endl;
+}
 
 
 
