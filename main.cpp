@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 
-
+#include "Timer.hpp"
 #include "HashMap.hpp"
 #include "HashMapInternalChaining.hpp"
 
@@ -132,6 +132,7 @@ void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, si
 
 /**
 * Runs a test for quadratic and chaining collision resolution hash maps.
+* Calls each test function and print the time
 * 
 * @param mapContent Vector of entry pair to enter the hash map
 * @param lookups Vector of keys to search in the hash map
@@ -141,11 +142,24 @@ template <class T, class K>
 void test_template(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, std::ostream& out = std::cout) {
 	size_t bucketCount{ getBucketCount(mapContent.size()) };
 
-	chain(mapContent, lookups, bucketCount, out);
+	
+	out << "QUADRATIC - BEGIN\n" << std::endl;
+	Timer timer;
 	quadratic(mapContent, lookups, bucketCount, out);
+	out "QUADRATIC - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
+
+	out << "CHAINING:\n" << endl;
+	time.reset()
+	chain(mapContent, lookups, bucketCount, out);
+	out << "CHAINING - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
+
 }
 
-
+/**
+* Basic test of functionality with integers as keys and values.
+* 
+* @param out Output stream reference to log the results to
+*/
 void test1(std::ostream& out = std::cout) {
 	MapContent<int, int> data{
 		{1, 4},
@@ -172,7 +186,19 @@ void test1(std::ostream& out = std::cout) {
 
 	test_template(data, lookups, out);
 }
+
+/**
+* Test with complex data type: std::string
+*
+* @param out Output stream reference to log the results to
+*/
 void test2(std::ostream& out = std::cout);
+
+/**
+* Test of 
+*
+* @param out Output stream reference to log the results to
+*/
 void test3(std::ostream& out = std::cout);
 void test4(std::ostream& out = std::cout);
 
