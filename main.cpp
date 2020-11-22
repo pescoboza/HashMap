@@ -194,28 +194,93 @@ void test1(std::ostream& out = std::cout) {
 */
 void test2(std::ostream& out = std::cout);
 
+
+
+
+
+
+
+struct Book {
+	std::string m_name;
+	std::string m_author;
+};
+
+struct BookKey {
+	std::string m_key;
+	BookKey(const Book& book) :  m_key{ book.m_name + " by " + book.m_author }{}
+	friend bool operator==(const BookKey& l, const BookKey& r) {
+		return l.m_key == r.m_key;
+	}
+	
+	friend std::ostream& operator << (std::ostream& out, const BookKey& k) {
+		out << k.m_key;
+		return out;
+	}
+};
+
+
+
 /**
-* Test of 
+* Test with custom abstract data types.
 *
 * @param out Output stream reference to log the results to
 */
-void test3(std::ostream& out = std::cout);
-void test4(std::ostream& out = std::cout);
+void test3(std::ostream& out = std::cout) {
+
+	std::vector<Book> books{
+		{"Dune", "Frank Herbert"},
+		{"Ender's Game", "Orson Scott Card"},
+		{"The Hitchhicker's Guide to the Galaxy", "Douglas Adams"},
+		{"1948", "George Orwell"},
+		{"Fahrenheit 451", "Ray Bradbury"},
+		{"Brave New World", "Aldous Huxley"},
+		{"Foundation", "Isaac Asimov"},
+		{"Childhood's End", "Arthur C.Clarke"},
+		{"Ubik", "Phillip K. Dick"}
+	};
+
+	Lookups<BookKey> lookups{
+		books[0],
+		books[4],
+		books[8]
+	};
+
+	MapContent <BookKey, Book> mapContent;
+	for (const auto& book : books) {
+		mapContent.emplace_back(BookKey{book}, book);
+	}
+
+	test_template(mapContent, lookups, out);
+	
+
+};
+
+
+/**
+* Volume test
+*
+* @param out Output stream reference to log the results to
+*/
+void test4(std::ostream& out = std::cout) {
+	std::cout << "IMPLEMENT THIS!" << '\n';
+}
 
 
 int main() {
-	std::cout << "\n\n=========== TEST 1 ==================" << std::endl;
-	test1();
+	std::ostream& out{ std::cout };
 	
-	std::cout << "\n\n=========== TEST 2 ==================" << std::endl;
-	test2();
-
-	std::cout << "\n\n=========== TEST 3 ==================" << std::endl;
-	test3();
+	out << "\n\n=========== TEST 1 ==================" << std::endl;
+	test1(out);
 	
-	std::cout << "\n\n=========== TEST 4 ==================" << std::endl;
-	test4();
+	out << "\n\n=========== TEST 2 ==================" << std::endl;
+	test2(out);
 
-	std::cout << "Press enter to exit.";
+	out << "\n\n=========== TEST 3 ==================" << std::endl;
+	test3(out);
+	
+	out << "\n\n=========== TEST 4 ==================" << std::endl;
+	test4(out);
+
+	out << "Press enter to exit.";
 	std::cin.get();
 }
