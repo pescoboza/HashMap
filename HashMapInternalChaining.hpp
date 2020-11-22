@@ -147,10 +147,10 @@ private:
 	 * Space: O(1)
 	 *
 	 * @param  key Key of the entry to hash
-	 * @param [out] Node found found at the position
+	 * @param [out] Bucket iterator of the node
 	 * @return Index of the table mapped to the key
 	 */
-	size_t findNode(const K& key, Entry*& node);
+	size_t findNode(const K& key,  typename Bucket::iterator*& bucket);
 
 };
 
@@ -186,21 +186,30 @@ inline const std::pair<bool, typename HashMapInternalChaining<T, K, Hasher>::Ent
 
 template<class T, class K, class Hasher>
 inline typename HashMapInternalChaining<T, K, Hasher>::Entry* HashMapInternalChaining<T, K, Hasher>::find(const K& key) {
-	Entry* res{ nullptr };
-	findNode(key, res);
-	return (res != nullptr ? res->get() : nullptr);
+	// Look for the node
+	typename Bucket::iterator res{ nullptr };
+	BucketUPtr& bucketSlot{m_table[ findNode(key, res) ]};
+
+	// If the bucket does not exist, or the bucket does not contain the key
+	if ( bucketSlot == nullptr || res == bucketSlot->end()) {
+		// Return nothing
+		return nullptr;
+	}
+
+	// The result iterator is valid, return its content
+	return &*res;
 }
 
 template<class T, class K, class Hasher>
 inline void HashMapInternalChaining<T, K, Hasher>::erase(const K& key) {
-	// Find the node
-	Entry* res{ nullptr };
-	findNode(key, res);
+	// Look for the node
+	typename Bucket::iterator res{ nullptr };
+	BucketUPtr& bucketSlot{ m_table[findNode(key, res)] };
 
-	// If it is found, delete it
-	if (res != nullptr) {
+	// Check that the bucket is valid and that the node exists in the bucket
+	if (bucketSlot != nullptr && res != bucketSlot->end()) {
 		m_size--;
-		res->reset();
+		bucketSlot->erase(res);
 	}
 }
 
@@ -220,7 +229,7 @@ inline typename HashMapInternalChaining<T, K, Hasher>::Bucket::iterator HashMapI
 }
 
 template<class T, class K, class Hasher>
-inline size_t HashMapInternalChaining<T, K, Hasher>::findNode(const K& key, Entry*& node) {
+inline size_t HashMapInternalChaining<T, K, Hasher>::findNode(const K& key, typename Bucket::iterator*& bucket) {
 	// Look for the node in the bucket list of the index mapped to the key
 	BucketUPtr& bucketPtr{ m_table[hash(key)] };
 	return (bucketPtr != nullptr ? findNodeInBucket(key, *bucketPtr) : nullptr);
