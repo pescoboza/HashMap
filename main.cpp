@@ -5,6 +5,11 @@
 #include "HashMap.hpp"
 #include "HashMapInternalChaining.hpp"
 
+template <class T, class K>
+using MapContent = std::vector<std::pair<K, T>>;
+
+template <class K>
+using Lookups = std::vector<K>;
 
 const std::vector<size_t> PRIMES{
 	 7U,
@@ -27,12 +32,19 @@ const std::vector<size_t> PRIMES{
 	 16777215U
 };
 
-template<class Container>
-unsigned getSize(const Container& cont, size_t*, const std::vector<size_t>& table = PRIMES ) {
-	size_t actualSize{ cont.size() };
+/**
+* Calculates the size needed for the bucket count.
+* Time: O(n)
+* Space: O(1)
+* 
+* @param size Number of elements to store in the hash map
+* @param table Vector of prime sizes for bucket count
+* @return Minimum prime bucket count from the table given that matches the size
+*/
+unsigned getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES ) {
 
 	for (const auto& s : table) {
-		if (s >= actualSize) {
+		if (s >= size) {
 			return s;
 		}
 	}
@@ -40,16 +52,20 @@ unsigned getSize(const Container& cont, size_t*, const std::vector<size_t>& tabl
 	return table[table.size() - 1];
 }
 
+
+/**
+* Runs a test with the hashmap implementation by internal chaining.
+* Time: O(n)
+* Space: O(n)
+*
+* @param mapContent Vector of pairs of entries of the hash map
+* @param lookups Vector of keys to lookup in the hash map
+* @param bucketCount Number of buckets in the hash map
+* @param out Output stream reference to log the results to
+*/
 template <class T, class K>
-using MapContent = std::vector<std::pair<K, T>>;
-
-template <class K>
-using Lookups = std::vector<K>;
-
-
-template <class T, class K>
-void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t mapSize, std::ostream& out = std::cout) {
-	HashMapInternalChaining<K, T> map{mapSize};
+void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t bucketCount, std::ostream& out = std::cout) {
+	HashMapInternalChaining<K, T> map{bucketCount};
 
 	out << " ====== INSERTIONS =======\n"
 	for (const auto& entry : mapContent) {
@@ -75,10 +91,20 @@ void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t
 	
 }
 
+/**
+* Runs a test with the hashmap implementation by quadratic open addressing.
+* Time: O(n)
+* Space: O(n)
+* 
+* @param mapContent Vector of pairs of entries of the hash map
+* @param lookups Vector of keys to lookup in the hash map
+* @param bucketCount Number of buckets in the hash map
+* @param out Output stream reference to log the results to
+*/
 template <class T, class K>
-void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t mapSize, std::ostream& out  = std::cout) {
+void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t bucketCount, std::ostream& out  = std::cout) {
 
-	HashMap<int, int> hashMap{PRIMES[4]};
+	HashMap<int, int> hashMap{bucketCount};
 
 
 	out << " ====== INSERTIONS =======\n"
@@ -104,21 +130,51 @@ void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, si
 		}
 }
 
+/**
+* Runs a test for quadratic and chaining collision resolution hash maps.
+* 
+* @param mapContent Vector of entry pair to enter the hash map
+* @param lookups Vector of keys to search in the hash map
+* @param out Output stream reference to log the results to 
+*/
 template <class T, class K>
-void test_template(const MapContent<K, T>& mapContent, const Lookups<K>& lookups) {
-	size_t mapSize{ getSize(mapContent) };
+void test_template(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, std::ostream& out = std::cout) {
+	size_t bucketCount{ getBucketCount(mapContent.size()) };
 
-	chain(mapContent, lookups, mapSize);
-	quadratic(mapContent, lookups, mapSize);
+	chain(mapContent, lookups, bucketCount, out);
+	quadratic(mapContent, lookups, bucketCount, out);
 }
 
 
-// TODO: Iplement the tests
-// TODO: Change linear to quadratic probing
-void test1();
-void test2();
-void test3();
-void test4();
+void test1(std::ostream& out = std::cout) {
+	MapContent<int, int> data{
+		{1, 4},
+		{2, 8},
+		{3, 12},
+		{4, 16},
+		{5, 20},
+		{6, 24},
+		{7, 28},
+		{8, 32},
+		{9, 36},
+		{10,40},
+		{11,44},
+		{12,48},
+		{13,52},
+		{14,56},
+		{15,60},
+		{16,64}
+	};
+
+	Lookups <int> lookups{
+		1,3,6,16,14,8,9,20
+	};
+
+	test_template(data, lookups, out);
+}
+void test2(std::ostream& out = std::cout);
+void test3(std::ostream& out = std::cout);
+void test4(std::ostream& out = std::cout);
 
 
 int main() {
