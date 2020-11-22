@@ -142,15 +142,15 @@ private:
 
 	/**
 	 * Finds the node element of the given key.
-	 * Protected helper for other functions
+	 * Private helper for other functions
 	 * Time: O(1)
 	 * Space: O(1)
 	 *
 	 * @param  key Key of the entry to hash
-	 * @param [out] Bucket iterator of the node
-	 * @return Index of the table mapped to the key
+	 * @param [out] bucketPos Bucket index in the table
+	 * @return Pair with result and iteartor of node in bucket
 	 */
-	size_t findNode(const K& key,  typename Bucket::iterator*& bucket);
+	std::pair<bool, typename Bucket::iterator > findNode(const K& key, size_t& bucketPos);
 
 };
 
@@ -171,7 +171,7 @@ inline const std::pair<bool, typename HashMapInternalChaining<T, K, Hasher>::Ent
 	auto nodeIt{findNodeInBucket(key, *bucketSlot)};
 
 	// Check the result of the lookup
-	if (nodeIt != bucketSlot.end()) {
+	if (nodeIt != bucketSlot->end()) {
 		// The key was occupied
 		return {false, &*nodeIt};
 	}
@@ -187,29 +187,30 @@ inline const std::pair<bool, typename HashMapInternalChaining<T, K, Hasher>::Ent
 template<class T, class K, class Hasher>
 inline typename HashMapInternalChaining<T, K, Hasher>::Entry* HashMapInternalChaining<T, K, Hasher>::find(const K& key) {
 	// Look for the node
-	typename Bucket::iterator res{ nullptr };
-	BucketUPtr& bucketSlot{m_table[ findNode(key, res) ]};
+	size_t i{ 0U };
+	auto res{ findNode(key, i) };
 
 	// If the bucket does not exist, or the bucket does not contain the key
-	if ( bucketSlot == nullptr || res == bucketSlot->end()) {
+	if (!res.first) {
 		// Return nothing
 		return nullptr;
 	}
 
 	// The result iterator is valid, return its content
-	return &*res;
+	return &*res.second;
 }
 
 template<class T, class K, class Hasher>
 inline void HashMapInternalChaining<T, K, Hasher>::erase(const K& key) {
 	// Look for the node
-	typename Bucket::iterator res{ nullptr };
-	BucketUPtr& bucketSlot{ m_table[findNode(key, res)] };
+	size_t bucketPos;
+	auto res{ findNode(key, bucketPos) };
 
 	// Check that the bucket is valid and that the node exists in the bucket
-	if (bucketSlot != nullptr && res != bucketSlot->end()) {
+	if (res.first) {
+		// Erase the node from the bucket
 		m_size--;
-		bucketSlot->erase(res);
+		m_table[bucketPos]->erase(res.second);
 	}
 }
 
@@ -229,10 +230,31 @@ inline typename HashMapInternalChaining<T, K, Hasher>::Bucket::iterator HashMapI
 }
 
 template<class T, class K, class Hasher>
-inline size_t HashMapInternalChaining<T, K, Hasher>::findNode(const K& key, typename Bucket::iterator*& bucket) {
+inline std::pair<bool , typename HashMapInternalChaining<T, K, Hasher>::Bucket::iterator> HashMapInternalChaining<T, K, Hasher>::findNode(const K& key, size_t& bucketPos) {
 	// Look for the node in the bucket list of the index mapped to the key
-	BucketUPtr& bucketPtr{ m_table[hash(key)] };
-	return (bucketPtr != nullptr ? findNodeInBucket(key, *bucketPtr) : nullptr);
+	size_t i{ hash(key) };
+	bucketPos = i;
+	BucketUPtr& bucketPtr{ m_table[i] };
+	
+	
+	if (bucketPtr != nullptr) {
+	
+		// The bucket is valid
+		auto it{ findNodeInBucket(key, *bucketPtr) };
+		
+		if (it != bucketPtr->end()) {
+			// The bucket contains the key
+			return { true, it };
+		}
+		else {
+			// The bucket does NOT contain the key
+			return { false, it };
+		}
+
+	}
+
+	// The bucket was empty
+	return { false, typename Bucket::iterator{} };
 }
 
 #endif // !HASH_MAP_INTERNAL_CHAINING_HPP
