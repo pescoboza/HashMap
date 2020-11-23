@@ -1,6 +1,11 @@
 #ifndef HASH_MAP_HPP
 #define HASH_MAP_HPP
 
+// Pedro Escoboza
+// A01251531
+// TCB1004.500
+// 21/11/2020
+
 #include <memory>
 #include <vector>
 

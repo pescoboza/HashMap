@@ -1,4 +1,10 @@
+// Pedro Escoboza
+// A01251531
+// TCB1004.500
+// 21/11/2020
+
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 #include "Timer.hpp"
@@ -70,7 +76,7 @@ void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t
 	out << " ====== INSERTIONS =======\n";
 	for (const auto& entry : mapContent) {
 		auto res{ map.insert(entry.first, entry.second) };
-		out << "try insert: (" << entry.first <<", " << entry.second <<  ") result: " << std::boolalpha << res.first << '\n';
+		out << "try insert: (" << entry.first <<", " << entry.second <<  ")        result: " << std::boolalpha << res.first << '\n';
 	}
 	
 	out << "\n\n\n";
@@ -79,7 +85,7 @@ void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t
 	for (const auto& key : lookups) {
 		auto res{ map.find(key) };
 		
-		out << "looked up: " << key << " result: ";
+		out << "looked up: " << key << "        result: ";
 		if (res == nullptr) {
 			out << " NULL";
 		}
@@ -110,7 +116,7 @@ void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, si
 	out << " ====== INSERTIONS =======\n";
 		for (const auto& entry : mapContent) {
 			auto res{ hashMap.insert(entry.first, entry.second) };
-			out << "try insert: (" << entry.first << ", " << entry.second << ") result: " << std::boolalpha << res.first << '\n';
+			out << "try insert: (" << entry.first << ", " << entry.second << ")        result: " << std::boolalpha << res.first << '\n';
 		}
 
 	out << "\n\n\n";
@@ -119,7 +125,7 @@ void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, si
 		for (const auto& key : lookups) {
 			auto res{ hashMap.find(key) };
 
-			out << "looked up: " << key << " result: ";
+			out << "looked up: " << key << "        result: ";
 			if (res == nullptr) {
 				out << " NULL";
 			}
@@ -193,7 +199,38 @@ void test1(std::ostream& out = std::cout) {
 * @param out Output stream reference to log the results to
 */
 void test2(std::ostream& out = std::cout) {
-	std::cout << "IMPLEMENT TEST 2" << std::endl;
+	MapContent<std::string, int> data{
+		{"ALPHA",   1},
+		{"BRAVO",   2},
+		{"CHARLIE", 3},
+		{"DELTA",   4},
+		{"ECHO",    5},
+		{"FOXTROT", 6},
+		{"GOLF",    7},
+		{"HOTEL",   8},
+		{"INDIA",   9},
+		{"JULIET",  10},
+		{"KILO",    11},
+		{"LIMA",    12},
+		{"MIKE",    13},
+		{"NOVEMBER",14},
+		{"OSCAR",   15},
+		{"PAPA",    16},
+		{"QUEBEC",  17},
+		{"ROMEO",   18},
+		{"SIERRA",  19},
+		{"TANGO",   20},
+		{"UNIFORM", 21},
+		{"VICTOR",  22},
+		{"WHISKEY", 23},
+		{"X-RAY",   24},
+		{"YANKEE",  25},
+		{"ZULU",    26}
+	};
+
+	Lookups<std::string> lookups{
+		"X-RAY", "SANTA CLAUS", "HOTEL", "TABASCO", "BETA"
+	};
 }
 
 
@@ -273,17 +310,33 @@ void test3(std::ostream& out = std::cout) {
 
 
 /**
-* Volume test
+* Volume test.
 *
 * @param out Output stream reference to log the results to
 */
 void test4(std::ostream& out = std::cout) {
-	std::cout << "IMPLEMENT THIS!" << '\n';
+	const unsigned NUM_INSERTS{ 10000 };
+	MapContent<unsigned, float> mapContent;
+	Lookups<unsigned> lookups;
+	mapContent.reserve(NUM_INSERTS);
+	for (unsigned i{ 0U }; i < NUM_INSERTS; ++i) {
+		mapContent.emplace_back(i, i / 10);
+		if (i & 1) {
+			lookups.emplace_back(i);
+		}
+	}
+
+	test_template(mapContent, lookups, out);
 }
 
 
 int main() {
-	std::ostream& out{ std::cout };
+
+	std::ofstream out{ "tests.txt" };
+	if (!out.is_open()) {
+		std::cerr << "Could not write test file." << std::endl;
+		std::exit(1);
+	}
 	
 	out << "\n\n=========== TEST 1 ==================" << std::endl;
 	test1(out);
@@ -297,6 +350,8 @@ int main() {
 	out << "\n\n=========== TEST 4 ==================" << std::endl;
 	test4(out);
 
-	out << "Press enter to exit.";
+	out.close();
+
+	std::cout << "Tests done. Press enter to exit.";
 	std::cin.get();
 }
