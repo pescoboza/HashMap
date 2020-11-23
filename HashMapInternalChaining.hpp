@@ -5,11 +5,6 @@
 #include <list>
 #include <memory>
 
-
-
-
-
-
 /**
  * Implementation a hash table of constant size.
  *

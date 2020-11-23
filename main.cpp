@@ -63,9 +63,9 @@ unsigned getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES )
 * @param bucketCount Number of buckets in the hash map
 * @param out Output stream reference to log the results to
 */
-template <class K, class T>
+template <class K, class T, class Hasher = std::hash<K>>
 void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t bucketCount, std::ostream& out = std::cout) {
-	HashMapInternalChaining<K, T> map{bucketCount};
+	HashMapInternalChaining<K, T, Hasher> map{bucketCount};
 
 	out << " ====== INSERTIONS =======\n";
 	for (const auto& entry : mapContent) {
@@ -101,10 +101,10 @@ void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t
 * @param bucketCount Number of buckets in the hash map
 * @param out Output stream reference to log the results to
 */
-template <class K, class T>
+template <class K, class T, class Hasher = std::hash<K>>
 void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t bucketCount, std::ostream& out  = std::cout) {
 
-	HashMap<K, T> hashMap{bucketCount};
+	HashMap<K, T, Hasher> hashMap{bucketCount};
 
 
 	out << " ====== INSERTIONS =======\n";
@@ -138,19 +138,19 @@ void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, si
 * @param lookups Vector of keys to search in the hash map
 * @param out Output stream reference to log the results to 
 */
-template <class K, class T>
+template <class K, class T, class Hasher = std::hash<K>>
 void test_template(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, std::ostream& out = std::cout) {
 	size_t bucketCount{ getBucketCount(mapContent.size()) };
 
 	
 	out << "QUADRATIC - BEGIN\n" << std::endl;
 	Timer timer;
-	quadratic(mapContent, lookups, bucketCount, out);
+	quadratic<K, T, Hasher>(mapContent, lookups, bucketCount, out);
 	out << "QUADRATIC - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
 
 	out << "CHAINING:\n" << std::endl;
 	timer.reset();
-	chain(mapContent, lookups, bucketCount, out);
+	chain<K, T, Hasher>(mapContent, lookups, bucketCount, out);
 	out << "CHAINING - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
 
 }
@@ -225,6 +225,15 @@ struct BookKey {
 	}
 };
 
+struct BookKeyHasher {
+	static const std::hash<std::string> s_hasher;
+
+	BookKeyHasher() {}
+	size_t operator()(const BookKey& bk) const {
+		return s_hasher(bk.m_key);
+	}
+};
+const std::hash<std::string> BookKeyHasher::s_hasher{};
 
 
 /**
@@ -257,7 +266,7 @@ void test3(std::ostream& out = std::cout) {
 		mapContent.emplace_back(BookKey{book}, book);
 	}
 
-	test_template(mapContent, lookups, out);
+	test_template<BookKey, Book, BookKeyHasher>(mapContent, lookups, out);
 	
 
 };
