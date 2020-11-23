@@ -70,7 +70,7 @@ void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t
 	out << " ====== INSERTIONS =======\n";
 	for (const auto& entry : mapContent) {
 		auto res{ map.insert(entry.first, entry.second) };
-		out << "try insert: (" << entry.first <<", " << entry.second <<  ") result: " << std::boolalpha << res.first;
+		out << "try insert: (" << entry.first <<", " << entry.second <<  ") result: " << std::boolalpha << res.first << '\n';
 	}
 	
 	out << "\n\n\n";
@@ -86,7 +86,7 @@ void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t
 		else {
 			out << res->second;
 		}
-
+		out << '\n';
 	}
 	
 }
@@ -110,7 +110,7 @@ void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, si
 	out << " ====== INSERTIONS =======\n";
 		for (const auto& entry : mapContent) {
 			auto res{ hashMap.insert(entry.first, entry.second) };
-			out << "try insert: (" << entry.first << ", " << entry.second << ") result: " << std::boolalpha << res.first;
+			out << "try insert: (" << entry.first << ", " << entry.second << ") result: " << std::boolalpha << res.first << '\n';
 		}
 
 	out << "\n\n\n";
@@ -126,7 +126,7 @@ void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, si
 			else {
 				out << res->second;
 			}
-
+			out << '\n';
 		}
 }
 
@@ -147,8 +147,8 @@ void test_template(const MapContent<K, T>& mapContent, const Lookups<K>& lookups
 	Timer timer;
 	quadratic<K, T, Hasher>(mapContent, lookups, bucketCount, out);
 	out << "QUADRATIC - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
-
-	out << "CHAINING:\n" << std::endl;
+	out << '\n';
+	out << "CHAINING - BEGIN\n" << std::endl;
 	timer.reset();
 	chain<K, T, Hasher>(mapContent, lookups, bucketCount, out);
 	out << "CHAINING - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
