@@ -39,6 +39,8 @@ const std::vector<size_t> PRIMES{
 	 16777215U
 };
 
+const size_t IP_MAP_SIZE{ PRIMES[1] };
+
 /**
 * Calculates the size needed for the bucket count.
 * Time: O(n)
@@ -110,20 +112,56 @@ std::pair<Port, Ip> getIpAndPortFromAccess(const IpAddress& connection){
 	return std::make_pair<Port, Ip>( connection.m_port, { connection.m_part1, connection.m_part2, connection.m_part3, connection.m_part4 });
 }
 
+struct AccessSummary {
+	Ip m_ip;
+	unsigned m_numConnections;
+
+	AccessSummary(const Ip& ip) : m_ip{ ip }, m_numConnections{ 0U }{}
+	void operator++() { m_numConnections++; }
+
+	friend std::ostream operator<<(std::ostream& out, const AccessSummary& as) {
+		out << "IP: " << as.m_ip << " CONNECTIONS: " << as.m_numConnections;
+	}
+};
 
 int main() {
-	using InputMap = HashMapInternalChaining<Port, Ip>;
+	using IpMap = HashMapInternalChaining<Ip, unsigned>;
+	using PortMap = HashMapInternalChaining<Port, IpMap>;
 
-	std::vector<std::string> lines;
+	
+	std::vector<std::string> lines{ fio::readLines("bitacora3.txt")};
 
 
-	InputMap hashMap{getBucketCount(lines.size())};
+	PortMap hashMap{getBucketCount(lines.size())};
 
 	for (const auto& line : lines) {
 		auto entry{ getIpAndPortFromAccess(parseIpStr(line)) };
+		Port& port{ entry.first };
+		Ip& ip{ entry.second };
 
-		
 
+		auto res{hashMap.find(port)};
+
+		// Port not found, create it
+		if (res == nullptr) {
+			IpMap ipMap{IP_MAP_SIZE};
+			ipMap.insert(ip, 1U);
+			hashMap.insert(port, ipMap);
+		}
+		// Port found
+		else {
+			// Get the ip map of the port
+			auto& ipMap{ res->second };
+
+			// Attempt to emplace new ip
+			auto res{ipMap.insert(ip, 1U)};
+
+			// Check if the element was not emplaced
+			if (!res.first) {
+				// Increment the access count
+				res.second->second++;
+			}
+		}
 	}
 
 	

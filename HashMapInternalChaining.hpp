@@ -152,6 +152,18 @@ private:
 	 */
 	std::pair<bool, typename Bucket::iterator > findNode(const K& key, size_t& bucketPos);
 
+
+	/**
+	 * Helper to print the hash map.
+	 * Time: O(n)
+	 * Space: O(n)
+	 *
+	 * @param  [out] out Ostream to print out the hash map
+	 * @param [out] bucketPos Bucket index in the table
+	 * @return Pair with result and iteartor of node in bucket
+	 */
+	friend std::ostream& operator<<(std::ostream& out, const HashMapInternalChaining& hm);
+
 };
 
 template<class K, class T, class Hasher>
@@ -258,6 +270,3 @@ inline std::pair<bool , typename HashMapInternalChaining<K, T, Hasher>::Bucket::
 }
 
 #endif // !HASH_MAP_INTERNAL_CHAINING_HPP
-
-
-
