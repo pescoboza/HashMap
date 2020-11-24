@@ -2,14 +2,14 @@
 
 #include <sstream>
 
-ip::IpAddress::IpAddress() :
+IpAddress::IpAddress() :
 	m_part1{ 0U },
 	m_part2{ 0U },
 	m_part3{ 0U },
 	m_part4{ 0U },
 	m_port{ 0U }{}
 
-ip::IpAddress::IpAddress(unsigned part1, unsigned part2, unsigned part3, unsigned part4, unsigned port) :
+IpAddress::IpAddress(unsigned part1, unsigned part2, unsigned part3, unsigned part4, unsigned port) :
 	m_part1{ part1 }, 
 	m_part2{ part2 }, 
 	m_part3{ part3 }, 
@@ -17,7 +17,7 @@ ip::IpAddress::IpAddress(unsigned part1, unsigned part2, unsigned part3, unsigne
 	m_port{ port }{}
 
 
-ip::IpAddress::IpAddress(const std::string& ipStr) {
+IpAddress::IpAddress(const std::string& ipStr) {
 	std::string buff;
 	for (const auto& ch : ipStr) {
 		buff.push_back(std::isdigit(ch) ? ch : ' ');
@@ -36,7 +36,7 @@ ip::IpAddress::IpAddress(const std::string& ipStr) {
 }
 
 
-std::string ip::IpAddress::str() const {
+std::string IpAddress::str() const {
 	std::string buff{ std::to_string(m_part1) };
 	buff.push_back('.');
 	buff.append(std::to_string(m_part2)).push_back('.');
@@ -47,7 +47,7 @@ std::string ip::IpAddress::str() const {
 }
 
 
-bool ip::operator==(const ip::IpAddress& l, const ip::IpAddress& r) {
+bool operator==(const IpAddress& l, const IpAddress& r) {
 	return (l.m_part1 == r.m_part1 &&
 		l.m_part2 == r.m_part2 &&
 		l.m_part3 == r.m_part3 &&
@@ -55,7 +55,7 @@ bool ip::operator==(const ip::IpAddress& l, const ip::IpAddress& r) {
 		l.m_port == r.m_port);
 }
 
-bool ip::operator>(const ip::IpAddress& l, const ip::IpAddress& r) {
+bool operator>(const IpAddress& l, const IpAddress& r) {
 	if (l.m_part1 > r.m_part1) { return true; }
 	else if (l.m_part1 < r.m_part1) { return false; }
 	else {
@@ -82,7 +82,7 @@ bool ip::operator>(const ip::IpAddress& l, const ip::IpAddress& r) {
 	return false;
 }
 
-bool ip::operator<(const ip::IpAddress& l, const ip::IpAddress& r) {
+bool operator<(const IpAddress& l, const IpAddress& r) {
 	if (l.m_part1 < r.m_part1) { return true; }
 	else if (l.m_part1 > r.m_part1) { return false; }
 	else {
