@@ -50,6 +50,7 @@ public:
 	*  @return HashMapInternalChaining
 	*/
 	HashMapInternalChaining(const HashMapInternalChaining& copy) : m_table{}, m_hasher{}, m_bucketCount{ copy.bucket_count() }, m_size{copy.size()}{
+		m_table.resize(m_bucketCount);
 		for (const auto& bucket : copy.m_table) {
 			
 			if (bucket == nullptr) {

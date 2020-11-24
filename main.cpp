@@ -12,12 +12,8 @@
 #include "IpAddress.hpp"
 #include "HashMapInternalChaining.hpp"
 
-template <class K, class T>
-using MapContent = std::vector<std::pair<K, T>>;
 
-template <class K>
-using Lookups = std::vector<K>;
-
+// Vector of prime numbers to use as dynamic bucket counts for the port map
 const std::vector<size_t> PRIMES{
 	 7U,
 	 63U,
@@ -39,6 +35,7 @@ const std::vector<size_t> PRIMES{
 	 16777215U
 };
 
+// Bucket count of the ip maps
 const size_t IP_MAP_SIZE{ PRIMES[1] };
 
 /**
@@ -61,7 +58,9 @@ size_t getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES ) {
 	return table[table.size() - 1];
 }
 
-// Helper to parse the ip from the file line
+/**
+* Helper to parse the ip from the file line
+*/ 
 std::string parseIpStr(const std::string& line) {
 	// Get the file line into a stream to output tokens
 	std::istringstream fullLine{ line };
@@ -210,7 +209,7 @@ int main() {
 	// Destroy the lines, they are not needed anymore and they take memory
 	lines.~vector();
 	
-	
+	// Display the build hash map
 	std::cout << portMap << std::endl;
 
 
