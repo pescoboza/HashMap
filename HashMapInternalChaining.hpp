@@ -42,6 +42,26 @@ public:
 		m_table.shrink_to_fit();
 	}
 
+	/**
+	* Copy constructor. Allows for nesting of hash maps as values themselves.
+	* Time: O(n)
+	* Space: O(n)
+	* 
+	*  @return HashMapInternalChaining
+	*/
+	HashMapInternalChaining(const HashMapInternalChaining& copy) : m_table{}, m_hasher{}, m_bucketCount{ copy.bucket_count() }, m_size{copy.size()}{
+		for (const auto& bucket : copy.m_table) {
+			
+			if (bucket == nullptr) {
+				continue;
+			}
+
+			for (const auto& entry : *bucket) {
+				insert(entry.first, entry.second);
+			}
+		}
+	}
+
 
 	/**
 	 * Insert a new element in the hash table if no element already has the key.
@@ -159,10 +179,22 @@ private:
 	 * Space: O(n)
 	 *
 	 * @param  [out] out Ostream to print out the hash map
-	 * @param [out] bucketPos Bucket index in the table
-	 * @return Pair with result and iteartor of node in bucket
+	 * @param  hm Const reference to the hash map to print
+	 * @return Ostream reference after the insertion
 	 */
-	friend std::ostream& operator<<(std::ostream& out, const HashMapInternalChaining& hm);
+	friend std::ostream& operator<<(std::ostream& out, const HashMapInternalChaining& hm) {
+		for (const auto& bucket : hm.m_table) {
+			if (bucket == nullptr) {
+				continue;
+			}
+
+			for (const auto& entry : *bucket) {
+				out << entry.first << " : " << entry.second << '\n';
+			}
+
+		}
+		return out;
+	}
 
 };
 
@@ -228,7 +260,7 @@ inline void HashMapInternalChaining<K, T, Hasher>::erase(const K& key) {
 
 template<class K, class T, class Hasher>
 inline size_t HashMapInternalChaining<K, T, Hasher>::hash(const K& key) const {
-	return m_hasher(key) % (m_bucketCount - 1);
+	return m_hasher(key) % m_bucketCount;
 }
 
 template<class K, class T, class Hasher>

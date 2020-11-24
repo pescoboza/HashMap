@@ -50,7 +50,7 @@ const size_t IP_MAP_SIZE{ PRIMES[1] };
 * @param table Vector of prime sizes for bucket count
 * @return Minimum prime bucket count from the table given that matches the size
 */
-unsigned getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES ) {
+size_t getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES ) {
 
 	for (const auto& s : table) {
 		if (s >= size) {
@@ -82,9 +82,25 @@ std::string parseIpStr(const std::string& line) {
 	return ipStr;
 }
 
+
+/**
+* Extends the IpAddress class to represent an input connection from an ipv4.
+* 
+* @return Ip
+*/
 class Ip : public IpAddress {
 
 public:
+	struct Hasher {
+		
+		size_t operator()(const Ip& ip) const {
+			return s_hasher(ip.str());
+		}
+
+	private:
+		static std::hash<std::string> s_hasher;
+	};
+	
 	Ip(unsigned part_1, unsigned part_2, unsigned part_3, unsigned part_4) : IpAddress{ part_1, part_2, part_3, part_4, 0U } {}
 
 	friend std::ostream& operator<<(std::ostream& out, const Ip& ip) {
@@ -93,9 +109,27 @@ public:
 	}
 };
 
+std::hash<std::string> Ip::Hasher::s_hasher{};
+
+/**
+* Extends the IpAddress to represent an access port in the server.
+* 
+* @return Port
+*/
 class Port : public IpAddress {
 
 public:
+	struct Hasher {
+
+		size_t operator()(const Port& ip) const {
+			return s_hasher(ip.str());
+		}
+
+	private: 
+		static std::hash<std::string> s_hasher;
+	};
+
+
 	Port(unsigned port) : IpAddress{ 0U, 0U, 0U, 0U, port} {}
 
 	friend std::ostream& operator<<(std::ostream& out, const Port& port) {
@@ -108,45 +142,54 @@ public:
 	}
 };
 
+std::hash<std::string> Port::Hasher::s_hasher{};
+
+/**
+* Splits the full ip addresss in to ipv4 and port.
+* Time: O(1)
+* Space: O(1)
+* 
+* @param connection IpAddress of the the connection
+* @return pair of Port and Ip
+*/
 std::pair<Port, Ip> getIpAndPortFromAccess(const IpAddress& connection){
 	return std::make_pair<Port, Ip>( connection.m_port, { connection.m_part1, connection.m_part2, connection.m_part3, connection.m_part4 });
 }
 
-struct AccessSummary {
-	Ip m_ip;
-	unsigned m_numConnections;
-
-	AccessSummary(const Ip& ip) : m_ip{ ip }, m_numConnections{ 0U }{}
-	void operator++() { m_numConnections++; }
-
-	friend std::ostream operator<<(std::ostream& out, const AccessSummary& as) {
-		out << "IP: " << as.m_ip << " CONNECTIONS: " << as.m_numConnections;
-	}
-};
 
 int main() {
-	using IpMap = HashMapInternalChaining<Ip, unsigned>;
-	using PortMap = HashMapInternalChaining<Port, IpMap>;
+	using IpMap = HashMapInternalChaining<Ip, unsigned, Ip::Hasher>;
+	using PortMap = HashMapInternalChaining<Port, IpMap, Port::Hasher>;
 
-	
+	// Read the log file and store the lines for ease of iteration
 	std::vector<std::string> lines{ fio::readLines("bitacora3.txt")};
 
+	// Intialize the port map with the number of buckets corresponding to the lines
+	PortMap portMap{getBucketCount(lines.size())};
 
-	PortMap hashMap{getBucketCount(lines.size())};
-
+	// Iterate through each line
 	for (const auto& line : lines) {
+
+		// Parse the full ip from the line string
 		auto entry{ getIpAndPortFromAccess(parseIpStr(line)) };
+		
+		// Get the port and ip from the entry
 		Port& port{ entry.first };
 		Ip& ip{ entry.second };
 
-
-		auto res{hashMap.find(port)};
+		// Look for the port in the port hash map
+		auto res{portMap.find(port)};
 
 		// Port not found, create it
 		if (res == nullptr) {
+			// Create new ip map
 			IpMap ipMap{IP_MAP_SIZE};
+			
+			// Add the new ip with frequency of one
 			ipMap.insert(ip, 1U);
-			hashMap.insert(port, ipMap);
+
+			// Insert the ip map into the 
+			portMap.insert(port, ipMap);
 		}
 		// Port found
 		else {
@@ -164,10 +207,11 @@ int main() {
 		}
 	}
 
+	// Destroy the lines, they are not needed anymore and they take memory
+	lines.~vector();
 	
 	
-	
-
+	std::cout << portMap << std::endl;
 
 
 	std::cout << "Tests done. Press enter to exit.";

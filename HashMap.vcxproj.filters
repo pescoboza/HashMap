@@ -24,6 +24,9 @@
     <ClCompile Include="IpAddress.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="fileio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HashMap.hpp">
@@ -33,6 +36,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="IpAddress.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fileio.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

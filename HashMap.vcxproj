@@ -139,11 +139,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="fileio.hpp" />
     <ClInclude Include="HashMap.hpp" />
     <ClInclude Include="IpAddress.hpp" />
     <ClInclude Include="Timer.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="fileio.cpp" />
     <ClCompile Include="HashMapInternalChaining.hpp" />
     <ClCompile Include="IpAddress.cpp" />
     <ClCompile Include="main.cpp" />
