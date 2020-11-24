@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "Timer.hpp"
+#include "fileio.hpp"
 #include "IpAddress.hpp"
 #include "HashMapInternalChaining.hpp"
 
@@ -58,6 +59,26 @@ unsigned getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES )
 	return table[table.size() - 1];
 }
 
+// Helper to parse the ip from the file line
+std::string parseIpStr(const std::string& line) {
+	// Get the file line into a stream to output tokens
+	std::istringstream fullLine{ line };
+
+
+	// Throw away unsused information
+	{
+		std::string str;
+		fullLine >> str;
+		fullLine >> str;
+		fullLine >> str;
+	}
+
+	// Extract the ip string
+	std::string ipStr;
+	fullLine >> ipStr;
+
+	return ipStr;
+}
 
 class Ip : public IpAddress {
 
@@ -92,6 +113,20 @@ std::pair<Port, Ip> getIpAndPortFromAccess(const IpAddress& connection){
 
 int main() {
 	using InputMap = HashMapInternalChaining<Port, Ip>;
+
+	std::vector<std::string> lines;
+
+
+	InputMap hashMap{getBucketCount(lines.size())};
+
+	for (const auto& line : lines) {
+		auto entry{ getIpAndPortFromAccess(parseIpStr(line)) };
+
+		
+
+	}
+
+	
 	
 	
 
