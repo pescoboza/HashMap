@@ -20,10 +20,12 @@
 */
 template <class K, class T, class Hasher = std::hash<K>>
 class HashMapInternalChaining {
+public:
 	using Entry = std::pair<const K, T>;
 	using Bucket = std::list<Entry>;
 	using BucketUPtr = std::unique_ptr<Bucket>;
 
+private:
 	std::vector<BucketUPtr> m_table; // Associative table container for key value pairs
 	Hasher m_hasher; // Hashing struct with overloaded operator()
 	size_t m_bucketCount; // Number of buckets in the table

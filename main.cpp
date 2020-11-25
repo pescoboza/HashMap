@@ -14,7 +14,8 @@
 
 
 const char* INPUT_FILE{ "bitacora3.txt" };
-const char* OUTPUT_FILE{ "output.txt" };
+const char* MOST_ACCESSED_PORT_OUTFILE{"most_accessed_port.json"};
+const char* NET_MAP_OUTPUT_FILE{ "net_map.txt" };
 
 
 // Vector of prime numbers to use as dynamic bucket counts for the port map
@@ -162,8 +163,30 @@ std::pair<Port, Ip> getIpAndPortFromAccess(const IpAddress& connection){
 }
 
 
+/**
+* Helper class extending the hash map to add a counter and manage input connections.
+* 
+* @reutrn IpMap
+*/
+class IpMap : public HashMapInternalChaining<Ip, unsigned, Ip::Hasher>{
+	unsigned m_numConnections;
+	
+public:
+	IpMap() : HashMapInternalChaining<Ip, unsigned, Ip::Hasher>{ IP_MAP_SIZE } {}
+
+	void incNumConnections() {
+		m_numConnections++;
+	}
+	
+	unsigned getNumConnections()const {
+		return m_numConnections;
+	}
+
+};
+
+
+
 void run() {
-	using IpMap = HashMapInternalChaining<Ip, unsigned, Ip::Hasher>;
 	using PortMap = HashMapInternalChaining<Port, IpMap, Port::Hasher>;
 
 	// Read the log file and store the lines for ease of iteration
@@ -188,13 +211,17 @@ void run() {
 		// Port not found, create it
 		if (res == nullptr) {
 			// Create new ip map
-			IpMap ipMap{IP_MAP_SIZE};
+			IpMap ipMap;
 			
 			// Add the new ip with frequency of one
 			ipMap.insert(ip, 1U);
 
+			// Increment the number of total connections
+			ipMap.incNumConnections();
+
 			// Insert the ip map into the 
 			portMap.insert(port, ipMap);
+
 		}
 		// Port found
 		else {
@@ -204,35 +231,40 @@ void run() {
 			// Attempt to emplace new ip
 			auto res{ipMap.insert(ip, 1U)};
 
+			// Increment the number of total connections
+			ipMap.incNumConnections();
+
 			// Check if the element was not emplaced
 			if (!res.first) {
 				// Increment the access count
 				res.second->second++;
 			}
+			
 		}
+		
 	}
 
 	// Destroy the lines, they are not needed anymore and they take memory
 	lines.~vector();
 	
 	// Open a file to print the map
-	std::ofstream outFile{ OUTPUT_FILE };
-	if (!outFile.is_open()) {
-		std::cerr << "[ERROR] Could not open file '" << OUTPUT_FILE << "'" << std::endl;
+	std::ofstream netMapOutFile{ NET_MAP_OUTPUT_FILE };
+	if (!netMapOutFile.is_open()) {
+		std::cerr << "[ERROR] Could not open file '" << NET_MAP_OUTPUT_FILE << "'" << std::endl;
 		std::exit(1);
 	}
 
 	// Display the built hash map
-	outFile << portMap;
-	outFile.close();
+	netMapOutFile << portMap;
+	netMapOutFile.close();
 
 
 	// Scan the map for the most vulnerable port and store it to a reference
 	size_t maxNumConnections{ 0U };
 	const std::pair<const Port, IpMap>* mostAccessedPortEntry{ nullptr };
 	auto reducerCallback{ 
-		[&maxNumConnections, &mostAccessedPortEntry](const std::pair<const Port, IpMap>& entry) {
-			size_t numConnections{entry.second.size()};
+		[&maxNumConnections, &mostAccessedPortEntry](const PortMap::Entry& entry) {
+			size_t numConnections{entry.second.getNumConnections()};
 
 			if (numConnections > maxNumConnections) {
 				maxNumConnections = numConnections;
@@ -241,13 +273,31 @@ void run() {
 		}
 	};
 
-
+	// Run the callback on each element
 	portMap.forEach(reducerCallback);
 
+	std::ofstream portOutFile{ MOST_ACCESSED_PORT_OUTFILE };
+	if (!portOutFile.is_open()) {
+		std::cerr << "[ERROR] Could not open file '" << MOST_ACCESSED_PORT_OUTFILE << "'" << std::endl;
+		std::exit(1);
+	}
 
-
-
-	
+	// Print the port summary to the file in json format
+	portOutFile << "{\n" <<
+		"    \"mostAccessedPort\": " << '\"'<<mostAccessedPortEntry->first << '\"' << ",\n" <<
+		"    \"numberConnections\": " << '\"' << maxNumConnections << '\"' << ",\n" <<
+		"    \"ips\": " << "{\n";
+	size_t commaCounter{maxNumConnections};
+	mostAccessedPortEntry->second.forEach(
+		[&portOutFile, &commaCounter](const IpMap::Entry& entry) {
+			commaCounter -= entry.second;
+			portOutFile << "        \"" << entry.first << "\": " << entry.second << (commaCounter != 0 ? ",\n" : "\n");
+		}
+	);
+	portOutFile << "    }\n}";
+		
+	// Close the outpu file
+	portOutFile.close();
 }
 
 int main() {
@@ -259,5 +309,5 @@ int main() {
 	}
 
 	std::cout << "Tests done. Press enter to exit.";
-	std::cin.get();
+	//std::cin.get();
 }
