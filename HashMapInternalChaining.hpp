@@ -139,6 +139,24 @@ public:
 	 */
 	size_t bucket_count() const { return m_bucketCount; }
 
+	/**
+	* Helper to run a callbach on each element of the hash map
+	* Time: O(n)
+	* Space: O(1)
+	* 
+	* @param func Unary function that takes a const std::pair<const K, T>& as parameter
+	*/
+	template <class UnaryFunction>
+	void forEach(UnaryFunction func) const {
+		for (const auto& bucket : m_table) {
+			if (bucket != nullptr) {
+				for (const auto& entry : *bucket) {
+					func(entry);
+				}
+			}
+		}
+	}
+
 private:
 	/**
 	 * Generates a container index mapped to the key.

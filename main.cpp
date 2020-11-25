@@ -13,6 +13,10 @@
 #include "HashMapInternalChaining.hpp"
 
 
+const char* INPUT_FILE{ "bitacora3.txt" };
+const char* OUTPUT_FILE{ "output.txt" };
+
+
 // Vector of prime numbers to use as dynamic bucket counts for the port map
 const std::vector<size_t> PRIMES{
 	 7U,
@@ -60,6 +64,8 @@ size_t getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES ) {
 
 /**
 * Helper to parse the ip from the file line
+* 
+* @return String of the ip and port from the file line
 */ 
 std::string parseIpStr(const std::string& line) {
 	// Get the file line into a stream to output tokens
@@ -156,7 +162,7 @@ std::pair<Port, Ip> getIpAndPortFromAccess(const IpAddress& connection){
 }
 
 
-int main() {
+void run() {
 	using IpMap = HashMapInternalChaining<Ip, unsigned, Ip::Hasher>;
 	using PortMap = HashMapInternalChaining<Port, IpMap, Port::Hasher>;
 
@@ -209,9 +215,48 @@ int main() {
 	// Destroy the lines, they are not needed anymore and they take memory
 	lines.~vector();
 	
-	// Display the build hash map
-	std::cout << portMap << std::endl;
+	// Open a file to print the map
+	std::ofstream outFile{ OUTPUT_FILE };
+	if (!outFile.is_open()) {
+		std::cerr << "[ERROR] Could not open file '" << OUTPUT_FILE << "'" << std::endl;
+		std::exit(1);
+	}
 
+	// Display the built hash map
+	outFile << portMap;
+	outFile.close();
+
+
+	// Scan the map for the most vulnerable port and store it to a reference
+	size_t maxNumConnections{ 0U };
+	const std::pair<const Port, IpMap>* mostAccessedPortEntry{ nullptr };
+	auto reducerCallback{ 
+		[&maxNumConnections, &mostAccessedPortEntry](const std::pair<const Port, IpMap>& entry) {
+			size_t numConnections{entry.second.size()};
+
+			if (numConnections > maxNumConnections) {
+				maxNumConnections = numConnections;
+				mostAccessedPortEntry = &entry;
+			}
+		}
+	};
+
+
+	portMap.forEach(reducerCallback);
+
+
+
+
+	
+}
+
+int main() {
+	try {
+		run();
+	}
+	catch (std::exception& e) {
+		std::cerr << e.what(); 
+	}
 
 	std::cout << "Tests done. Press enter to exit.";
 	std::cin.get();
