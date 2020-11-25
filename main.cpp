@@ -301,13 +301,15 @@ void run() {
 }
 
 int main() {
+	Timer timer;
 	try {
 		run();
 	}
 	catch (std::exception& e) {
 		std::cerr << e.what(); 
 	}
-
+	
+	std::cout << "Elapsed seconds: " << timer.elapsed() << std::endl;
 	std::cout << "Tests done. Press enter to exit.";
-	//std::cin.get();
+	std::cin.get();
 }
