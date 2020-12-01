@@ -20,10 +20,12 @@
 */
 template <class K, class T, class Hasher = std::hash<K>>
 class HashMapInternalChaining {
+public:
 	using Entry = std::pair<const K, T>;
 	using Bucket = std::list<Entry>;
 	using BucketUPtr = std::unique_ptr<Bucket>;
 
+private:
 	std::vector<BucketUPtr> m_table; // Associative table container for key value pairs
 	Hasher m_hasher; // Hashing struct with overloaded operator()
 	size_t m_bucketCount; // Number of buckets in the table
@@ -40,6 +42,27 @@ public:
 	HashMapInternalChaining(size_t bucket_count) : m_table{}, m_hasher{ Hasher{} }, m_bucketCount{ bucket_count }, m_size{ 0U } {
 		m_table.resize(m_bucketCount);
 		m_table.shrink_to_fit();
+	}
+
+	/**
+	* Copy constructor. Allows for nesting of hash maps as values themselves.
+	* Time: O(n)
+	* Space: O(n)
+	* 
+	*  @return HashMapInternalChaining
+	*/
+	HashMapInternalChaining(const HashMapInternalChaining& copy) : m_table{}, m_hasher{}, m_bucketCount{ copy.bucket_count() }, m_size{copy.size()}{
+		m_table.resize(m_bucketCount);
+		for (const auto& bucket : copy.m_table) {
+			
+			if (bucket == nullptr) {
+				continue;
+			}
+
+			for (const auto& entry : *bucket) {
+				insert(entry.first, entry.second);
+			}
+		}
 	}
 
 
@@ -118,6 +141,24 @@ public:
 	 */
 	size_t bucket_count() const { return m_bucketCount; }
 
+	/**
+	* Helper to run a callbach on each element of the hash map
+	* Time: O(n)
+	* Space: O(1)
+	* 
+	* @param func Unary function that takes a const std::pair<const K, T>& as parameter
+	*/
+	template <class UnaryFunction>
+	void forEach(UnaryFunction func) const {
+		for (const auto& bucket : m_table) {
+			if (bucket != nullptr) {
+				for (const auto& entry : *bucket) {
+					func(entry);
+				}
+			}
+		}
+	}
+
 private:
 	/**
 	 * Generates a container index mapped to the key.
@@ -151,6 +192,30 @@ private:
 	 * @return Pair with result and iteartor of node in bucket
 	 */
 	std::pair<bool, typename Bucket::iterator > findNode(const K& key, size_t& bucketPos);
+
+
+	/**
+	 * Helper to print the hash map.
+	 * Time: O(n)
+	 * Space: O(n)
+	 *
+	 * @param  [out] out Ostream to print out the hash map
+	 * @param  hm Const reference to the hash map to print
+	 * @return Ostream reference after the insertion
+	 */
+	friend std::ostream& operator<<(std::ostream& out, const HashMapInternalChaining& hm) {
+		for (const auto& bucket : hm.m_table) {
+			if (bucket == nullptr) {
+				continue;
+			}
+
+			for (const auto& entry : *bucket) {
+				out << entry.first << " : " << entry.second << '\n';
+			}
+
+		}
+		return out;
+	}
 
 };
 
@@ -216,7 +281,7 @@ inline void HashMapInternalChaining<K, T, Hasher>::erase(const K& key) {
 
 template<class K, class T, class Hasher>
 inline size_t HashMapInternalChaining<K, T, Hasher>::hash(const K& key) const {
-	return m_hasher(key) % (m_bucketCount - 1);
+	return m_hasher(key) % m_bucketCount;
 }
 
 template<class K, class T, class Hasher>
@@ -258,6 +323,3 @@ inline std::pair<bool , typename HashMapInternalChaining<K, T, Hasher>::Bucket::
 }
 
 #endif // !HASH_MAP_INTERNAL_CHAINING_HPP
-
-
-

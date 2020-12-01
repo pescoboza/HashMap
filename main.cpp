@@ -8,15 +8,17 @@
 #include <vector>
 
 #include "Timer.hpp"
-#include "HashMap.hpp"
+#include "fileio.hpp"
+#include "IpAddress.hpp"
 #include "HashMapInternalChaining.hpp"
 
-template <class K, class T>
-using MapContent = std::vector<std::pair<K, T>>;
 
-template <class K>
-using Lookups = std::vector<K>;
+const char* INPUT_FILE{ "bitacora3.txt" };
+const char* MOST_ACCESSED_PORT_OUTFILE{"most_accessed_port.json"};
+const char* NET_MAP_OUTPUT_FILE{ "net_map.txt" };
 
+
+// Vector of prime numbers to use as dynamic bucket counts for the port map
 const std::vector<size_t> PRIMES{
 	 7U,
 	 63U,
@@ -38,6 +40,9 @@ const std::vector<size_t> PRIMES{
 	 16777215U
 };
 
+// Bucket count of the ip maps
+const size_t IP_MAP_SIZE{ PRIMES[1] };
+
 /**
 * Calculates the size needed for the bucket count.
 * Time: O(n)
@@ -47,7 +52,7 @@ const std::vector<size_t> PRIMES{
 * @param table Vector of prime sizes for bucket count
 * @return Minimum prime bucket count from the table given that matches the size
 */
-unsigned getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES ) {
+size_t getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES ) {
 
 	for (const auto& s : table) {
 		if (s >= size) {
@@ -58,300 +63,253 @@ unsigned getBucketCount(size_t size, const std::vector<size_t>& table = PRIMES )
 	return table[table.size() - 1];
 }
 
+/**
+* Helper to parse the ip from the file line
+* 
+* @return String of the ip and port from the file line
+*/ 
+std::string parseIpStr(const std::string& line) {
+	// Get the file line into a stream to output tokens
+	std::istringstream fullLine{ line };
+
+
+	// Throw away unsused information
+	{
+		std::string str;
+		fullLine >> str;
+		fullLine >> str;
+		fullLine >> str;
+	}
+
+	// Extract the ip string
+	std::string ipStr;
+	fullLine >> ipStr;
+
+	return ipStr;
+}
+
 
 /**
-* Runs a test with the hashmap implementation by internal chaining.
-* Time: O(n)
-* Space: O(n)
-*
-* @param mapContent Vector of pairs of entries of the hash map
-* @param lookups Vector of keys to lookup in the hash map
-* @param bucketCount Number of buckets in the hash map
-* @param out Output stream reference to log the results to
+* Extends the IpAddress class to represent an input connection from an ipv4.
+* 
+* @return Ip
 */
-template <class K, class T, class Hasher = std::hash<K>>
-void chain(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t bucketCount, std::ostream& out = std::cout) {
-	HashMapInternalChaining<K, T, Hasher> map{bucketCount};
+class Ip : public IpAddress {
 
-	out << " ====== INSERTIONS =======\n";
-	for (const auto& entry : mapContent) {
-		auto res{ map.insert(entry.first, entry.second) };
-		out << "try insert: (" << entry.first <<", " << entry.second <<  ")        result: " << std::boolalpha << res.first << '\n';
-	}
-	
-	out << "\n\n\n";
-	out << " ====== LOOKUPS =======\n";
-
-	for (const auto& key : lookups) {
-		auto res{ map.find(key) };
+public:
+	struct Hasher {
 		
-		out << "looked up: " << key << "        result: ";
+		size_t operator()(const Ip& ip) const {
+			return s_hasher(ip.str());
+		}
+
+	private:
+		static std::hash<std::string> s_hasher;
+	};
+	
+	Ip(unsigned part_1, unsigned part_2, unsigned part_3, unsigned part_4) : IpAddress{ part_1, part_2, part_3, part_4, 0U } {}
+
+	friend std::ostream& operator<<(std::ostream& out, const Ip& ip) {
+		out << ip.m_part1 << '.' << ip.m_part2 << '.' << ip.m_part3 << '.' << ip.m_part4;
+		return out;
+	}
+};
+
+std::hash<std::string> Ip::Hasher::s_hasher{};
+
+/**
+* Extends the IpAddress to represent an access port in the server.
+* 
+* @return Port
+*/
+class Port : public IpAddress {
+
+public:
+	struct Hasher {
+
+		size_t operator()(const Port& ip) const {
+			return s_hasher(ip.str());
+		}
+
+	private: 
+		static std::hash<std::string> s_hasher;
+	};
+
+
+	Port(unsigned port) : IpAddress{ 0U, 0U, 0U, 0U, port} {}
+
+	friend std::ostream& operator<<(std::ostream& out, const Port& port) {
+		out << port.m_port;
+		return out;
+	}
+
+	friend bool operator==(const Port& l, const Port& r) {
+		return l.m_port == r.m_port;
+	}
+};
+
+std::hash<std::string> Port::Hasher::s_hasher{};
+
+/**
+* Splits the full ip addresss in to ipv4 and port.
+* Time: O(1)
+* Space: O(1)
+* 
+* @param connection IpAddress of the the connection
+* @return pair of Port and Ip
+*/
+std::pair<Port, Ip> getIpAndPortFromAccess(const IpAddress& connection){
+	return std::make_pair<Port, Ip>( connection.m_port, { connection.m_part1, connection.m_part2, connection.m_part3, connection.m_part4 });
+}
+
+
+/**
+* Helper class extending the hash map to add a counter and manage input connections.
+* 
+* @reutrn IpMap
+*/
+class IpMap : public HashMapInternalChaining<Ip, unsigned, Ip::Hasher>{
+	unsigned m_numConnections;
+	
+public:
+	IpMap() : HashMapInternalChaining<Ip, unsigned, Ip::Hasher>{ IP_MAP_SIZE } {}
+
+	void incNumConnections() {
+		m_numConnections++;
+	}
+	
+	unsigned getNumConnections()const {
+		return m_numConnections;
+	}
+
+};
+
+
+
+void run() {
+	using PortMap = HashMapInternalChaining<Port, IpMap, Port::Hasher>;
+
+	// Read the log file and store the lines for ease of iteration
+	std::vector<std::string> lines{ fio::readLines("bitacora3.txt")};
+
+	// Intialize the port map with the number of buckets corresponding to the lines
+	PortMap portMap{getBucketCount(lines.size())};
+
+	// Iterate through each line
+	for (const auto& line : lines) {
+
+		// Parse the full ip from the line string
+		auto entry{ getIpAndPortFromAccess(parseIpStr(line)) };
+		
+		// Get the port and ip from the entry
+		Port& port{ entry.first };
+		Ip& ip{ entry.second };
+
+		// Look for the port in the port hash map
+		auto res{portMap.find(port)};
+
+		// Port not found, create it
 		if (res == nullptr) {
-			out << " NULL";
+			// Create new ip map
+			IpMap ipMap;
+			
+			// Add the new ip with frequency of one
+			ipMap.insert(ip, 1U);
+
+			// Increment the number of total connections
+			ipMap.incNumConnections();
+
+			// Insert the ip map into the 
+			portMap.insert(port, ipMap);
+
 		}
+		// Port found
 		else {
-			out << res->second;
-		}
-		out << '\n';
-	}
-	
-}
+			// Get the ip map of the port
+			auto& ipMap{ res->second };
 
-/**
-* Runs a test with the hashmap implementation by quadratic open addressing.
-* Time: O(n)
-* Space: O(n)
-* 
-* @param mapContent Vector of pairs of entries of the hash map
-* @param lookups Vector of keys to lookup in the hash map
-* @param bucketCount Number of buckets in the hash map
-* @param out Output stream reference to log the results to
-*/
-template <class K, class T, class Hasher = std::hash<K>>
-void quadratic(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, size_t bucketCount, std::ostream& out  = std::cout) {
+			// Attempt to emplace new ip
+			auto res{ipMap.insert(ip, 1U)};
 
-	HashMap<K, T, Hasher> hashMap{bucketCount};
+			// Increment the number of total connections
+			ipMap.incNumConnections();
 
-
-	out << " ====== INSERTIONS =======\n";
-		for (const auto& entry : mapContent) {
-			auto res{ hashMap.insert(entry.first, entry.second) };
-			out << "try insert: (" << entry.first << ", " << entry.second << ")        result: " << std::boolalpha << res.first << '\n';
-		}
-
-	out << "\n\n\n";
-	out << " ====== LOOKUPS =======\n";
-
-		for (const auto& key : lookups) {
-			auto res{ hashMap.find(key) };
-
-			out << "looked up: " << key << "        result: ";
-			if (res == nullptr) {
-				out << " NULL";
+			// Check if the element was not emplaced
+			if (!res.first) {
+				// Increment the access count
+				res.second->second++;
 			}
-			else {
-				out << res->second;
-			}
-			out << '\n';
+			
 		}
-}
+		
+	}
 
-/**
-* Runs a test for quadratic and chaining collision resolution hash maps.
-* Calls each test function and print the time
-* 
-* @param mapContent Vector of entry pair to enter the hash map
-* @param lookups Vector of keys to search in the hash map
-* @param out Output stream reference to log the results to 
-*/
-template <class K, class T, class Hasher = std::hash<K>>
-void test_template(const MapContent<K, T>& mapContent, const Lookups<K>& lookups, std::ostream& out = std::cout) {
-	size_t bucketCount{ getBucketCount(mapContent.size()) };
-
+	// Destroy the lines, they are not needed anymore and they take memory
+	lines.~vector();
 	
-	out << "QUADRATIC - BEGIN\n" << std::endl;
-	Timer timer;
-	quadratic<K, T, Hasher>(mapContent, lookups, bucketCount, out);
-	out << "QUADRATIC - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
-	out << '\n';
-	out << "CHAINING - BEGIN\n" << std::endl;
-	timer.reset();
-	chain<K, T, Hasher>(mapContent, lookups, bucketCount, out);
-	out << "CHAINING - END - Elapsed: " << timer.elapsed() << " s" << std::endl;
-
-}
-
-/**
-* Basic test of functionality with integers as keys and values.
-* 
-* @param out Output stream reference to log the results to
-*/
-void test1(std::ostream& out = std::cout) {
-	MapContent<int, int> data{
-		{1, 4},
-		{2, 8},
-		{3, 12},
-		{4, 16},
-		{5, 20},
-		{6, 24},
-		{7, 28},
-		{8, 32},
-		{9, 36},
-		{10,40},
-		{11,44},
-		{12,48},
-		{13,52},
-		{14,56},
-		{15,60},
-		{16,64}
-	};
-
-	Lookups <int> lookups{
-		1,3,6,16,14,8,9,20
-	};
-
-	test_template(data, lookups, out);
-}
-
-/**
-* Test with complex data type: std::string
-*
-* @param out Output stream reference to log the results to
-*/
-void test2(std::ostream& out = std::cout) {
-	MapContent<std::string, int> data{
-		{"ALPHA",   1},
-		{"BRAVO",   2},
-		{"CHARLIE", 3},
-		{"DELTA",   4},
-		{"ECHO",    5},
-		{"FOXTROT", 6},
-		{"GOLF",    7},
-		{"HOTEL",   8},
-		{"INDIA",   9},
-		{"JULIET",  10},
-		{"KILO",    11},
-		{"LIMA",    12},
-		{"MIKE",    13},
-		{"NOVEMBER",14},
-		{"OSCAR",   15},
-		{"PAPA",    16},
-		{"QUEBEC",  17},
-		{"ROMEO",   18},
-		{"SIERRA",  19},
-		{"TANGO",   20},
-		{"UNIFORM", 21},
-		{"VICTOR",  22},
-		{"WHISKEY", 23},
-		{"X-RAY",   24},
-		{"YANKEE",  25},
-		{"ZULU",    26}
-	};
-
-	Lookups<std::string> lookups{
-		"X-RAY", "SANTA CLAUS", "HOTEL", "TABASCO", "BETA"
-	};
-}
-
-
-
-
-
-
-
-struct Book {
-	std::string m_name;
-	std::string m_author;
-
-	friend std::ostream& operator << (std::ostream& out, const Book& b) {
-		out << b.m_name;
-		return out;
-	}
-};
-
-struct BookKey {
-	std::string m_key;
-	BookKey(const Book& book) :  m_key{ book.m_name + " by " + book.m_author }{}
-	friend bool operator==(const BookKey& l, const BookKey& r) {
-		return l.m_key == r.m_key;
-	}
-	
-	friend std::ostream& operator << (std::ostream& out, const BookKey& k) {
-		out << k.m_key;
-		return out;
-	}
-};
-
-struct BookKeyHasher {
-	static const std::hash<std::string> s_hasher;
-
-	BookKeyHasher() {}
-	size_t operator()(const BookKey& bk) const {
-		return s_hasher(bk.m_key);
-	}
-};
-const std::hash<std::string> BookKeyHasher::s_hasher{};
-
-
-/**
-* Test with custom abstract data types.
-*
-* @param out Output stream reference to log the results to
-*/
-void test3(std::ostream& out = std::cout) {
-
-	std::vector<Book> books{
-		{"Dune", "Frank Herbert"},
-		{"Ender's Game", "Orson Scott Card"},
-		{"The Hitchhicker's Guide to the Galaxy", "Douglas Adams"},
-		{"1948", "George Orwell"},
-		{"Fahrenheit 451", "Ray Bradbury"},
-		{"Brave New World", "Aldous Huxley"},
-		{"Foundation", "Isaac Asimov"},
-		{"Childhood's End", "Arthur C.Clarke"},
-		{"Ubik", "Phillip K. Dick"}
-	};
-
-	Lookups<BookKey> lookups{
-		books[0],
-		books[4],
-		books[8]
-	};
-
-	MapContent<BookKey, Book> mapContent;
-	for (const auto& book : books) {
-		mapContent.emplace_back(BookKey{book}, book);
-	}
-
-	test_template<BookKey, Book, BookKeyHasher>(mapContent, lookups, out);
-	
-
-};
-
-
-/**
-* Volume test.
-*
-* @param out Output stream reference to log the results to
-*/
-void test4(std::ostream& out = std::cout) {
-	const unsigned NUM_INSERTS{ 10000 };
-	MapContent<unsigned, float> mapContent;
-	Lookups<unsigned> lookups;
-	mapContent.reserve(NUM_INSERTS);
-	for (unsigned i{ 0U }; i < NUM_INSERTS; ++i) {
-		mapContent.emplace_back(i, i / 10);
-		if (i & 1) {
-			lookups.emplace_back(i);
-		}
-	}
-
-	test_template(mapContent, lookups, out);
-}
-
-
-int main() {
-
-	std::ofstream out{ "tests.txt" };
-	if (!out.is_open()) {
-		std::cerr << "Could not write test file." << std::endl;
+	// Open a file to print the map
+	std::ofstream netMapOutFile{ NET_MAP_OUTPUT_FILE };
+	if (!netMapOutFile.is_open()) {
+		std::cerr << "[ERROR] Could not open file '" << NET_MAP_OUTPUT_FILE << "'" << std::endl;
 		std::exit(1);
 	}
-	
-	out << "\n\n=========== TEST 1 ==================" << std::endl;
-	test1(out);
-	
-	out << "\n\n=========== TEST 2 ==================" << std::endl;
-	test2(out);
 
-	out << "\n\n=========== TEST 3 ==================" << std::endl;
-	test3(out);
+	// Display the built hash map
+	netMapOutFile << portMap;
+	netMapOutFile.close();
+
+
+	// Scan the map for the most vulnerable port and store it to a reference
+	size_t maxNumConnections{ 0U };
+	const std::pair<const Port, IpMap>* mostAccessedPortEntry{ nullptr };
+	auto reducerCallback{ 
+		[&maxNumConnections, &mostAccessedPortEntry](const PortMap::Entry& entry) {
+			size_t numConnections{entry.second.getNumConnections()};
+
+			if (numConnections > maxNumConnections) {
+				maxNumConnections = numConnections;
+				mostAccessedPortEntry = &entry;
+			}
+		}
+	};
+
+	// Run the callback on each element
+	portMap.forEach(reducerCallback);
+
+	std::ofstream portOutFile{ MOST_ACCESSED_PORT_OUTFILE };
+	if (!portOutFile.is_open()) {
+		std::cerr << "[ERROR] Could not open file '" << MOST_ACCESSED_PORT_OUTFILE << "'" << std::endl;
+		std::exit(1);
+	}
+
+	// Print the port summary to the file in json format
+	portOutFile << "{\n" <<
+		"    \"mostAccessedPort\": " << '\"'<<mostAccessedPortEntry->first << '\"' << ",\n" <<
+		"    \"numberConnections\": " << '\"' << maxNumConnections << '\"' << ",\n" <<
+		"    \"ips\": " << "{\n";
+	size_t commaCounter{maxNumConnections};
+	mostAccessedPortEntry->second.forEach(
+		[&portOutFile, &commaCounter](const IpMap::Entry& entry) {
+			commaCounter -= entry.second;
+			portOutFile << "        \"" << entry.first << "\": " << entry.second << (commaCounter != 0 ? ",\n" : "\n");
+		}
+	);
+	portOutFile << "    }\n}";
+		
+	// Close the outpu file
+	portOutFile.close();
+}
+
+int main() {
+	Timer timer;
+	try {
+		run();
+	}
+	catch (std::exception& e) {
+		std::cerr << e.what(); 
+	}
 	
-	out << "\n\n=========== TEST 4 ==================" << std::endl;
-	test4(out);
-
-	out.close();
-
+	std::cout << "Elapsed seconds: " << timer.elapsed() << std::endl;
 	std::cout << "Tests done. Press enter to exit.";
 	std::cin.get();
 }
